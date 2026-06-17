@@ -133,6 +133,28 @@
   }
 }
 
+/* soft teal pulse for actively-computing node cards */
+@keyframes node-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(46, 230, 197, 0.18), 0 0 18px -8px rgba(46, 230, 197, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(46, 230, 197, 0.4), 0 0 26px -4px rgba(46, 230, 197, 0.55);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .text-glow {
   text-shadow: 0 0 24px rgba(46, 230, 197, 0.45);
 }
