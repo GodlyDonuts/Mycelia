@@ -1,0 +1,178 @@
+"use client"
+
+import { useState } from "react"
+import {
+  Hexagon,
+  LayoutDashboard,
+  Store,
+  Network,
+  Wallet,
+  Settings,
+  Menu,
+  X,
+  Coins,
+  Bell,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+
+type NavItem = { label: string; icon: typeof LayoutDashboard; active?: boolean }
+
+const NAV: NavItem[] = [
+  { label: "Dashboard", icon: LayoutDashboard, active: true },
+  { label: "Marketplace", icon: Store },
+  { label: "Network", icon: Network },
+  { label: "Earnings", icon: Wallet },
+]
+
+function NavList({ onNavigate }: { onNavigate?: () => void }) {
+  return (
+    <nav className="flex flex-col gap-1" aria-label="Primary">
+      {NAV.map((item) => {
+        const Icon = item.icon
+        return (
+          <a
+            key={item.label}
+            href="#"
+            aria-current={item.active ? "page" : undefined}
+            onClick={onNavigate}
+            className={cn(
+              "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+              item.active
+                ? "bg-primary/10 text-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+            )}
+          >
+            <Icon
+              className={cn(
+                "size-4.5 transition-colors",
+                item.active ? "text-primary" : "text-tertiary group-hover:text-foreground",
+              )}
+              strokeWidth={1.75}
+            />
+            <span className={item.active ? "font-medium" : ""}>{item.label}</span>
+            {item.active && (
+              <span className="ml-auto size-1.5 rounded-full bg-primary [animation:spore-pulse_3s_ease-in-out_infinite]" />
+            )}
+          </a>
+        )
+      })}
+    </nav>
+  )
+}
+
+function Brand() {
+  return (
+    <a href="#" className="flex items-center gap-2.5" aria-label="Mycelia home">
+      <span className="relative flex size-8 items-center justify-center rounded-md bg-primary/10">
+        <Hexagon className="size-5 text-primary" strokeWidth={1.5} />
+        <span className="absolute size-1.5 rounded-full bg-primary [animation:spore-pulse_3s_ease-in-out_infinite]" />
+      </span>
+      <span className="font-mono text-sm font-semibold tracking-widest text-foreground">MYCELIA</span>
+    </a>
+  )
+}
+
+/** Topbar MYC credit balance — wire `balance` to the live wallet/ledger feed. */
+function CreditBalance({ balance = "48,210" }: { balance?: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 glow-teal">
+      <Coins className="size-4 text-primary" strokeWidth={1.75} />
+      <span className="font-mono text-sm font-semibold tabular-nums text-foreground">{balance}</span>
+      <span className="font-mono text-xs text-muted-foreground">MYC</span>
+    </div>
+  )
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* ---- Desktop sidebar ---- */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-sidebar lg:flex">
+        <div className="flex h-16 items-center border-b border-border px-6">
+          <Brand />
+        </div>
+        <div className="flex-1 overflow-y-auto px-3 py-5">
+          <NavList />
+        </div>
+        <div className="border-t border-border px-3 py-4">
+          <a
+            href="#"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <Settings className="size-4.5 text-tertiary" strokeWidth={1.75} />
+            Settings
+          </a>
+        </div>
+      </aside>
+
+      {/* ---- Mobile drawer ---- */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="absolute inset-y-0 left-0 flex w-64 flex-col border-r border-border bg-sidebar">
+            <div className="flex h-16 items-center justify-between border-b border-border px-6">
+              <Brand />
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={() => setMobileOpen(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-3 py-5">
+              <NavList onNavigate={() => setMobileOpen(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ---- Main column ---- */}
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-background/70 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Open menu"
+              onClick={() => setMobileOpen(true)}
+              className="text-muted-foreground hover:text-foreground lg:hidden"
+            >
+              <Menu className="size-5" />
+            </button>
+            <div className="hidden flex-col sm:flex">
+              <span className="text-sm font-medium text-foreground">Cultivator Dashboard</span>
+              <span className="font-mono text-[11px] text-tertiary">node mesh · live</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <CreditBalance />
+            <button
+              type="button"
+              aria-label="Notifications"
+              className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              <Bell className="size-4.5" strokeWidth={1.75} />
+              <span className="absolute right-2 top-2 size-1.5 rounded-full bg-accent" />
+            </button>
+            <span
+              className="flex size-9 items-center justify-center rounded-full bg-secondary font-mono text-xs font-semibold text-foreground"
+              aria-hidden="true"
+            >
+              CK
+            </span>
+          </div>
+        </header>
+
+        <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+      </div>
+    </div>
+  )
+}
