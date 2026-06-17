@@ -155,6 +155,16 @@
   }
 }
 
+/* shimmering token bars for the NL "thinking" state */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .text-glow {
   text-shadow: 0 0 24px rgba(46, 230, 197, 0.45);
 }
