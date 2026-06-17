@@ -12,13 +12,6 @@ export function Hero() {
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-background" />
 
       <div className="relative mx-auto w-full max-w-4xl px-6 py-32 text-center lg:px-8">
-        <div className="mb-8 inline-flex items-center gap-2.5">
-          <span className="size-1.5 rounded-full bg-primary [animation:spore-pulse_2.6s_ease-in-out_infinite]" />
-          <span className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-            Shared compute cloud
-          </span>
-        </div>
-
         <h1 className="font-display mx-auto max-w-3xl text-[2.6rem] font-normal leading-[1.04] text-foreground sm:text-6xl lg:text-[4.1rem]">
           Idle machines, woven into one{" "}
           <span className="italic text-foreground/85">living</span> compute cloud.
