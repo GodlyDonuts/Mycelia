@@ -37,18 +37,21 @@ const WORKLOADS: Workload[] = [
 
 export function Workloads() {
   return (
-    <section id="workloads" className="border-y border-border bg-card/40">
-      <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
+    <section id="workloads" className="border-t border-border">
+      <div className="mx-auto max-w-7xl px-6 py-28 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="font-mono text-xs uppercase tracking-widest text-primary">
-            What you can run
-          </p>
-          <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          <div className="mb-5 inline-flex items-center gap-2">
+            <span className="size-1 rounded-full bg-primary" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+              What you can run
+            </span>
+          </div>
+          <h2 className="font-display text-balance text-4xl font-normal leading-[1.1] text-foreground sm:text-[2.75rem]">
             Built for work that loves to spread
           </h2>
-          <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">
-            Anything that parallelizes thrives here — the network grows toward the
-            work and reclaims itself when the job is done.
+          <p className="mt-5 text-pretty leading-relaxed text-muted-foreground">
+            Anything that parallelizes thrives here — the network grows toward the work
+            and reclaims itself when the job is done.
           </p>
         </div>
 
@@ -58,18 +61,18 @@ export function Workloads() {
             return (
               <div
                 key={w.title}
-                className="group rounded-xl border border-border bg-card p-6 transition-colors hover:border-primary/30"
+                className="group rounded-xl border border-border bg-card p-6 transition-colors hover:border-border/0 hover:bg-secondary/60"
               >
                 <span className="flex size-10 items-center justify-center rounded-lg border border-border bg-secondary text-primary">
                   <Icon className="size-5" strokeWidth={1.5} />
                 </span>
-                <h3 className="mt-4 text-base font-semibold text-foreground">
+                <h3 className="mt-5 text-base font-medium text-foreground">
                   {w.title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {w.body}
                 </p>
-                <span className="mt-4 inline-block font-mono text-[10px] uppercase tracking-widest text-tertiary">
+                <span className="mt-5 inline-block font-mono text-[10px] uppercase tracking-[0.18em] text-tertiary">
                   /{w.tag}
                 </span>
               </div>

@@ -18,7 +18,7 @@ export default function DashboardPage() {
     <AppShell>
       <div className="mx-auto flex max-w-[100rem] flex-col gap-6">
         <div>
-          <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="font-display text-balance text-3xl font-normal tracking-tight text-foreground">
             Your corner of the living network
           </h1>
           <p className="mt-1 text-pretty text-sm text-muted-foreground">

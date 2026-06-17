@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Hexagon } from "lucide-react"
+import { Wordmark } from "@/components/mycelium-mark"
 
 const NAV = [
   { label: "How it works", href: "#how-it-works" },
@@ -12,19 +12,11 @@ const NAV = [
 
 export function SiteHeader() {
   return (
-    <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <a href="#" className="flex items-center gap-2.5" aria-label="Mycelia home">
-          <span className="relative flex size-8 items-center justify-center rounded-md bg-primary/10">
-            <Hexagon className="size-5 text-primary" strokeWidth={1.5} />
-            <span className="absolute size-1.5 rounded-full bg-primary [animation:spore-pulse_3s_ease-in-out_infinite]" />
-          </span>
-          <span className="font-mono text-sm font-semibold tracking-widest text-foreground">
-            MYCELIA
-          </span>
-        </a>
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-border/70 bg-background/60 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 lg:px-8">
+        <Wordmark />
 
-        <nav className="hidden items-center gap-8 md:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-9 md:flex" aria-label="Primary">
           {NAV.map((item) => (
             <a
               key={item.href}
@@ -36,14 +28,14 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <Button
             variant="ghost"
             className="hidden text-muted-foreground hover:text-foreground sm:inline-flex"
           >
             Sign in
           </Button>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90 glow-teal">
+          <Button className="bg-primary font-medium text-primary-foreground hover:bg-primary/90">
             Become a Cultivator
           </Button>
         </div>

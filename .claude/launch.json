@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mycelia",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "frontend", "start"],
+      "port": 3000
+    }
+  ]
+}

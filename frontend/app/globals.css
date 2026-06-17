@@ -5,7 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
+  --font-display: var(--font-display), 'Georgia', serif;
   --font-sans: var(--font-geist-sans), 'Geist Fallback';
   --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
   --color-sidebar-ring: var(--sidebar-ring);
@@ -54,44 +55,47 @@
 
 :root {
   color-scheme: dark;
-  /* MYCELIA — bioluminescent dark palette */
-  --background: #0a0f0e;
-  --foreground: #e9f2ee;
-  --card: #121a17;
-  --card-foreground: #e9f2ee;
-  --popover: #121a17;
-  --popover-foreground: #e9f2ee;
-  --primary: #2ee6c5;
-  --primary-foreground: #04140f;
-  --secondary: #16201c;
-  --secondary-foreground: #e9f2ee;
-  --muted: #16201c;
-  --muted-foreground: #93a39c;
-  --accent: #f5b544;
-  --accent-foreground: #1a1304;
-  --tertiary: #5e6e68;
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(255, 255, 255, 0.06);
+  /* MYCELIA — quiet bioluminescence: warm near-black, one restrained jade accent.
+     Soul comes from warmth, typography, and texture — not glow. */
+  --background: #0d0d0c;
+  --foreground: #ecebe4;
+  --card: #141413;
+  --card-foreground: #ecebe4;
+  --popover: #161614;
+  --popover-foreground: #ecebe4;
+  --primary: #6fd3b8;
+  --primary-foreground: #06201a;
+  --secondary: #1a1a18;
+  --secondary-foreground: #ecebe4;
+  --muted: #1a1a18;
+  --muted-foreground: #918c81;
+  /* neutral hover surface — amber is NOT a brand accent, only a status signal */
+  --accent: #21211d;
+  --accent-foreground: #ecebe4;
+  --tertiary: #6a665d;
+  --destructive: oklch(0.62 0.13 25);
+  --border: rgba(255, 255, 255, 0.07);
   --input: rgba(255, 255, 255, 0.1);
-  --ring: #2ee6c5;
+  --ring: rgba(111, 211, 184, 0.45);
   /* status */
-  --status-online: #2ee6c5;
-  --status-idle: #f5b544;
-  --status-offline: #5b6b66;
-  --chart-1: #2ee6c5;
-  --chart-2: #f5b544;
-  --chart-3: #5e8a7e;
-  --chart-4: #93a39c;
-  --chart-5: #5b6b66;
+  --status-online: #6fd3b8;
+  --status-idle: #d8a25a;
+  --status-offline: #5b5b55;
+  /* charts — mostly neutral, one jade */
+  --chart-1: #6fd3b8;
+  --chart-2: #c7a87e;
+  --chart-3: #6e8a80;
+  --chart-4: #918c81;
+  --chart-5: #4a4a45;
   --radius: 0.625rem;
-  --sidebar: #0a0f0e;
-  --sidebar-foreground: #e9f2ee;
-  --sidebar-primary: #2ee6c5;
-  --sidebar-primary-foreground: #04140f;
-  --sidebar-accent: #16201c;
-  --sidebar-accent-foreground: #e9f2ee;
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: #2ee6c5;
+  --sidebar: #0d0d0c;
+  --sidebar-foreground: #ecebe4;
+  --sidebar-primary: #6fd3b8;
+  --sidebar-primary-foreground: #06201a;
+  --sidebar-accent: #1a1a18;
+  --sidebar-accent-foreground: #ecebe4;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-ring: rgba(111, 211, 184, 0.45);
 }
 
 @layer base {
@@ -100,21 +104,39 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
   }
+  /* editorial display face for large headlines */
+  .font-display {
+    font-family: var(--font-display), Georgia, 'Times New Roman', serif;
+    font-feature-settings: 'liga' 1, 'dlig' 1;
+    letter-spacing: -0.02em;
+  }
 }
 
+/* ── Texture: subtle film grain + faint blueprint dot-grid ───────────── */
+.bg-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.bg-dotgrid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ── Motion (restrained) ─────────────────────────────────────────────── */
 @keyframes spore-pulse {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.5;
     transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: scale(1.18);
+    transform: scale(1.25);
   }
 }
 
@@ -125,7 +147,7 @@
   }
   10%,
   90% {
-    opacity: 0.7;
+    opacity: 0.6;
   }
   100% {
     transform: translateY(-24px);
@@ -133,14 +155,14 @@
   }
 }
 
-/* soft teal pulse for actively-computing node cards */
+/* a quiet, low-intensity ring for actively-computing node cards — no bloom */
 @keyframes node-glow {
   0%,
   100% {
-    box-shadow: 0 0 0 1px rgba(46, 230, 197, 0.18), 0 0 18px -8px rgba(46, 230, 197, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(111, 211, 184, 0.14);
   }
   50% {
-    box-shadow: 0 0 0 1px rgba(46, 230, 197, 0.4), 0 0 26px -4px rgba(46, 230, 197, 0.55);
+    box-shadow: inset 0 0 0 1px rgba(111, 211, 184, 0.32);
   }
 }
 
@@ -155,7 +177,6 @@
   }
 }
 
-/* shimmering token bars for the NL "thinking" state */
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
@@ -165,19 +186,20 @@
   }
 }
 
+/* legacy glow utilities — deliberately neutralized so the whole app reads calm.
+   Kept as no-ops so any remaining references don't break. */
 .text-glow {
-  text-shadow: 0 0 24px rgba(46, 230, 197, 0.45);
+  text-shadow: none;
 }
-
 .glow-teal {
-  box-shadow: 0 0 0 1px rgba(46, 230, 197, 0.4), 0 0 28px -4px rgba(46, 230, 197, 0.55);
+  box-shadow: none;
 }
 
-/* Earnings calculator range input */
+/* Earnings calculator range input — restrained thumb, no neon */
 .myc-slider {
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
+  height: 3px;
   border-radius: 999px;
   background: var(--secondary);
   outline: none;
@@ -186,23 +208,23 @@
 .myc-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 999px;
   background: var(--primary);
-  box-shadow: 0 0 0 4px rgba(46, 230, 197, 0.18), 0 0 16px rgba(46, 230, 197, 0.6);
+  box-shadow: 0 0 0 4px rgba(111, 211, 184, 0.12);
   transition: transform 0.15s ease;
 }
 .myc-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.12);
+  transform: scale(1.1);
 }
 .myc-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border: none;
   border-radius: 999px;
   background: var(--primary);
-  box-shadow: 0 0 0 4px rgba(46, 230, 197, 0.18), 0 0 16px rgba(46, 230, 197, 0.6);
+  box-shadow: 0 0 0 4px rgba(111, 211, 184, 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {
