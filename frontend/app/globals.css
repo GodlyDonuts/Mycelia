@@ -1,0 +1,184 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-geist-sans), 'Geist Fallback';
+  --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-tertiary: var(--tertiary);
+  --color-status-online: var(--status-online);
+  --color-status-idle: var(--status-idle);
+  --color-status-offline: var(--status-offline);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  color-scheme: dark;
+  /* MYCELIA — bioluminescent dark palette */
+  --background: #0a0f0e;
+  --foreground: #e9f2ee;
+  --card: #121a17;
+  --card-foreground: #e9f2ee;
+  --popover: #121a17;
+  --popover-foreground: #e9f2ee;
+  --primary: #2ee6c5;
+  --primary-foreground: #04140f;
+  --secondary: #16201c;
+  --secondary-foreground: #e9f2ee;
+  --muted: #16201c;
+  --muted-foreground: #93a39c;
+  --accent: #f5b544;
+  --accent-foreground: #1a1304;
+  --tertiary: #5e6e68;
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: rgba(255, 255, 255, 0.06);
+  --input: rgba(255, 255, 255, 0.1);
+  --ring: #2ee6c5;
+  /* status */
+  --status-online: #2ee6c5;
+  --status-idle: #f5b544;
+  --status-offline: #5b6b66;
+  --chart-1: #2ee6c5;
+  --chart-2: #f5b544;
+  --chart-3: #5e8a7e;
+  --chart-4: #93a39c;
+  --chart-5: #5b6b66;
+  --radius: 0.625rem;
+  --sidebar: #0a0f0e;
+  --sidebar-foreground: #e9f2ee;
+  --sidebar-primary: #2ee6c5;
+  --sidebar-primary-foreground: #04140f;
+  --sidebar-accent: #16201c;
+  --sidebar-accent-foreground: #e9f2ee;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #2ee6c5;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@keyframes spore-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes spore-rise {
+  0% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  10%,
+  90% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-24px);
+    opacity: 0;
+  }
+}
+
+.text-glow {
+  text-shadow: 0 0 24px rgba(46, 230, 197, 0.45);
+}
+
+.glow-teal {
+  box-shadow: 0 0 0 1px rgba(46, 230, 197, 0.4), 0 0 28px -4px rgba(46, 230, 197, 0.55);
+}
+
+/* Earnings calculator range input */
+.myc-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--secondary);
+  outline: none;
+  cursor: pointer;
+}
+.myc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 4px rgba(46, 230, 197, 0.18), 0 0 16px rgba(46, 230, 197, 0.6);
+  transition: transform 0.15s ease;
+}
+.myc-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+}
+.myc-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 4px rgba(46, 230, 197, 0.18), 0 0 16px rgba(46, 230, 197, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
