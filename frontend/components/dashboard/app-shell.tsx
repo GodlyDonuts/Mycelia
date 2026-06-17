@@ -15,29 +15,30 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type NavItem = { label: string; icon: typeof LayoutDashboard; active?: boolean }
+type NavItem = { label: string; icon: typeof LayoutDashboard; href: string }
 
 const NAV: NavItem[] = [
-  { label: "Dashboard", icon: LayoutDashboard, active: true },
-  { label: "Marketplace", icon: Store },
-  { label: "Network", icon: Network },
-  { label: "Earnings", icon: Wallet },
+  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Marketplace", icon: Store, href: "/marketplace" },
+  { label: "Network", icon: Network, href: "#" },
+  { label: "Earnings", icon: Wallet, href: "#" },
 ]
 
-function NavList({ onNavigate }: { onNavigate?: () => void }) {
+function NavList({ active = "Dashboard", onNavigate }: { active?: string; onNavigate?: () => void }) {
   return (
     <nav className="flex flex-col gap-1" aria-label="Primary">
       {NAV.map((item) => {
         const Icon = item.icon
+        const isActive = item.label === active
         return (
           <a
             key={item.label}
-            href="#"
-            aria-current={item.active ? "page" : undefined}
+            href={item.href}
+            aria-current={isActive ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
               "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-              item.active
+              isActive
                 ? "bg-primary/10 text-foreground"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground",
             )}
@@ -45,12 +46,12 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
             <Icon
               className={cn(
                 "size-4.5 transition-colors",
-                item.active ? "text-primary" : "text-tertiary group-hover:text-foreground",
+                isActive ? "text-primary" : "text-tertiary group-hover:text-foreground",
               )}
               strokeWidth={1.75}
             />
-            <span className={item.active ? "font-medium" : ""}>{item.label}</span>
-            {item.active && (
+            <span className={isActive ? "font-medium" : ""}>{item.label}</span>
+            {isActive && (
               <span className="ml-auto size-1.5 rounded-full bg-primary [animation:spore-pulse_3s_ease-in-out_infinite]" />
             )}
           </a>
@@ -83,7 +84,17 @@ function CreditBalance({ balance = "48,210" }: { balance?: string }) {
   )
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  active = "Dashboard",
+  title = "Cultivator Dashboard",
+  subtitle = "node mesh · live",
+}: {
+  children: React.ReactNode
+  active?: string
+  title?: string
+  subtitle?: string
+}) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
@@ -94,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Brand />
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-5">
-          <NavList />
+          <NavList active={active} />
         </div>
         <div className="border-t border-border px-3 py-4">
           <a
@@ -129,7 +140,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-5">
-              <NavList onNavigate={() => setMobileOpen(false)} />
+              <NavList active={active} onNavigate={() => setMobileOpen(false)} />
             </div>
           </div>
         </div>
@@ -148,8 +159,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Menu className="size-5" />
             </button>
             <div className="hidden flex-col sm:flex">
-              <span className="text-sm font-medium text-foreground">Cultivator Dashboard</span>
-              <span className="font-mono text-[11px] text-tertiary">node mesh · live</span>
+              <span className="text-sm font-medium text-foreground">{title}</span>
+              <span className="font-mono text-[11px] text-tertiary">{subtitle}</span>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
