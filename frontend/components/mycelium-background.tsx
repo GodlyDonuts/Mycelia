@@ -9,12 +9,13 @@ type Node = {
   vy: number
   r: number
   phase: number
+  lit: boolean
 }
 
 /**
  * MyceliumBackground
- * GPU-light canvas animation: a slowly drifting glowing teal node-link web
- * on the dark charcoal background. Respects prefers-reduced-motion.
+ * A delicate, mostly-neutral drifting node-link web — thin hairline threads with
+ * a handful of softly-lit jade nodes. Restraint over glow. Respects reduced-motion.
  */
 export function MyceliumBackground({ className }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -33,8 +34,9 @@ export function MyceliumBackground({ className }: { className?: string }) {
     let nodes: Node[] = []
     let raf = 0
 
-    const LINK_DIST = 170
-    const TEAL = "46, 230, 197"
+    const LINK_DIST = 150
+    const JADE = "111, 211, 184"
+    const THREAD = "236, 235, 228" // faint warm-white threads
 
     function build() {
       const parent = canvas.parentElement
@@ -47,22 +49,24 @@ export function MyceliumBackground({ className }: { className?: string }) {
       canvas.style.height = `${height}px`
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
-      // density scales with area, capped for performance
-      const count = Math.min(Math.round((width * height) / 22000), 70)
-      nodes = Array.from({ length: count }, () => ({
+      // sparse density — a quiet web, not a swarm
+      const count = Math.min(Math.round((width * height) / 34000), 46)
+      nodes = Array.from({ length: count }, (_, i) => ({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.12,
-        vy: (Math.random() - 0.5) * 0.12,
-        r: 0.8 + Math.random() * 1.6,
+        vx: (Math.random() - 0.5) * 0.08,
+        vy: (Math.random() - 0.5) * 0.08,
+        r: 0.7 + Math.random() * 1.1,
         phase: Math.random() * Math.PI * 2,
+        // only ~1 in 7 nodes is "lit" jade; the rest are neutral
+        lit: i % 7 === 0,
       }))
     }
 
     function draw(t: number) {
       ctx.clearRect(0, 0, width, height)
 
-      // links
+      // threads
       for (let i = 0; i < nodes.length; i++) {
         const a = nodes[i]
         for (let j = i + 1; j < nodes.length; j++) {
@@ -71,9 +75,9 @@ export function MyceliumBackground({ className }: { className?: string }) {
           const dy = a.y - b.y
           const dist = Math.hypot(dx, dy)
           if (dist < LINK_DIST) {
-            const alpha = (1 - dist / LINK_DIST) * 0.16
-            ctx.strokeStyle = `rgba(${TEAL}, ${alpha})`
-            ctx.lineWidth = 0.6
+            const alpha = (1 - dist / LINK_DIST) * 0.07
+            ctx.strokeStyle = `rgba(${THREAD}, ${alpha})`
+            ctx.lineWidth = 0.5
             ctx.beginPath()
             ctx.moveTo(a.x, a.y)
             ctx.lineTo(b.x, b.y)
@@ -82,17 +86,17 @@ export function MyceliumBackground({ className }: { className?: string }) {
         }
       }
 
-      // nodes (soft glowing spores)
+      // nodes
       for (const n of nodes) {
-        const pulse = 0.5 + 0.5 * Math.sin(t * 0.0011 + n.phase)
-        const glow = 0.25 + pulse * 0.45
+        const pulse = 0.5 + 0.5 * Math.sin(t * 0.0009 + n.phase)
+        if (n.lit) {
+          ctx.fillStyle = `rgba(${JADE}, ${0.35 + pulse * 0.4})`
+        } else {
+          ctx.fillStyle = `rgba(${THREAD}, ${0.1 + pulse * 0.12})`
+        }
         ctx.beginPath()
-        ctx.fillStyle = `rgba(${TEAL}, ${glow})`
-        ctx.shadowBlur = 8
-        ctx.shadowColor = `rgba(${TEAL}, ${glow})`
-        ctx.arc(n.x, n.y, n.r + pulse * 0.6, 0, Math.PI * 2)
+        ctx.arc(n.x, n.y, n.r + (n.lit ? pulse * 0.5 : 0), 0, Math.PI * 2)
         ctx.fill()
-        ctx.shadowBlur = 0
 
         if (!reduced) {
           n.x += n.vx
@@ -122,11 +126,5 @@ export function MyceliumBackground({ className }: { className?: string }) {
     }
   }, [])
 
-  return (
-    <canvas
-      ref={canvasRef}
-      aria-hidden="true"
-      className={className}
-    />
-  )
+  return <canvas ref={canvasRef} aria-hidden="true" className={className} />
 }

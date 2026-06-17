@@ -18,7 +18,7 @@ export default function NetworkPage() {
     <AppShell active="Network" title="Network Telemetry" subtitle="living mesh · live">
       <div className="mx-auto flex max-w-[110rem] flex-col gap-6">
         <div>
-          <h1 className="text-balance text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="font-display text-balance text-3xl font-normal tracking-tight text-foreground">
             The living network, in motion
           </h1>
           <p className="mt-1 text-pretty text-sm text-muted-foreground">

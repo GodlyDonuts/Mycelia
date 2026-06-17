@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import {
-  Hexagon,
   LayoutDashboard,
   Store,
   Network,
@@ -14,6 +13,7 @@ import {
   Bell,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { MyceliumMark } from "@/components/mycelium-mark"
 
 type NavItem = { label: string; icon: typeof LayoutDashboard; href: string }
 
@@ -63,12 +63,9 @@ function NavList({ active = "Dashboard", onNavigate }: { active?: string; onNavi
 
 function Brand() {
   return (
-    <a href="#" className="flex items-center gap-2.5" aria-label="Mycelia home">
-      <span className="relative flex size-8 items-center justify-center rounded-md bg-primary/10">
-        <Hexagon className="size-5 text-primary" strokeWidth={1.5} />
-        <span className="absolute size-1.5 rounded-full bg-primary [animation:spore-pulse_3s_ease-in-out_infinite]" />
-      </span>
-      <span className="font-mono text-sm font-semibold tracking-widest text-foreground">MYCELIA</span>
+    <a href="/" className="flex items-center gap-2.5" aria-label="Mycelia home">
+      <MyceliumMark className="text-foreground" size={20} />
+      <span className="font-display text-[17px] tracking-[-0.01em] text-foreground">Mycelia</span>
     </a>
   )
 }
@@ -76,7 +73,7 @@ function Brand() {
 /** Topbar MYC credit balance — wire `balance` to the live wallet/ledger feed. */
 function CreditBalance({ balance = "48,210" }: { balance?: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-1.5 glow-teal">
+    <div className="flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-1.5">
       <Coins className="size-4 text-primary" strokeWidth={1.75} />
       <span className="font-mono text-sm font-semibold tabular-nums text-foreground">{balance}</span>
       <span className="font-mono text-xs text-muted-foreground">MYC</span>
@@ -171,7 +168,7 @@ export function AppShell({
               className="relative flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               <Bell className="size-4.5" strokeWidth={1.75} />
-              <span className="absolute right-2 top-2 size-1.5 rounded-full bg-accent" />
+              <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
             </button>
             <span
               className="flex size-9 items-center justify-center rounded-full bg-secondary font-mono text-xs font-semibold text-foreground"
