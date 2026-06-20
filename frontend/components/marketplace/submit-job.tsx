@@ -13,7 +13,8 @@ import {
   type JobType,
   type GpuTier,
 } from "@/lib/marketplace-data"
-import type { ApiStubResponse, SubmitRequest } from "@/lib/api-contracts"
+import { submitJob } from "@/lib/api-client"
+import type { SubmitRequest } from "@/lib/api-contracts"
 
 // ---- field primitives ----------------------------------------------------
 
@@ -95,19 +96,15 @@ export function SubmitJob() {
 
     try {
       const body: SubmitRequest = { spec: form, estimate: est }
-      const response = await fetch("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      })
+      const result = await submitJob(body)
 
-      if (!response.ok) {
-        throw new Error(`Submit endpoint returned ${response.status}`)
+      if (!result.response.ok) {
+        throw new Error(result.response.error)
       }
 
-      const json = await response.json() as ApiStubResponse<SubmitRequest>
+      const json = result.response
       setSubmitted(true)
-      setSubmitStatus(`${json.message ?? "Submit endpoint reached"} at ${json.timestamp ?? "now"}`)
+      setSubmitStatus(`${json.message} at ${json.timestamp} (${result.latencyMs} ms)`)
     } catch (error) {
       setSubmitStatus(error instanceof Error ? error.message : "Submit request failed")
     } finally {
@@ -329,8 +326,8 @@ export function SubmitJob() {
             submitted ? "text-primary" : "text-destructive",
           )}
         >
-          {/* POST /api/submit currently proves frontend-to-backend communication only. */}
-          {submitted ? "Spec posted to /api/submit. " : "Submit failed. "}
+          {/* POST /submit currently proves frontend-to-backend communication only. */}
+          {submitted ? "Spec posted to /submit. " : "Submit failed. "}
           {submitStatus}
         </p>
       )}

@@ -2,23 +2,25 @@
 
 import { useState } from "react"
 import { AppShell } from "@/components/dashboard/app-shell"
+import { getHealth, parseJob, pullWork, settle, submitJob, submitResult, type ApiClientResult } from "@/lib/api-client"
 import type {
+  API_PATHS,
   ApiEndpoint,
   ApiRequestByEndpoint,
-  ApiStubResponse,
   ParseJobRequest,
   PullWorkRequest,
   SettleRequest,
   SubmitRequest,
   SubmitResultRequest,
 } from "@/lib/api-contracts"
+import { API_PATHS as PATHS } from "@/lib/api-contracts"
 import { estimateCost, type JobFormState } from "@/lib/marketplace-data"
 
 type Endpoint<TEndpoint extends ApiEndpoint = ApiEndpoint> = {
   label: string
   method: "GET" | "POST"
   endpoint: TEndpoint
-  path: string
+  path: (typeof API_PATHS)[TEndpoint]
   payload?: ApiRequestByEndpoint[TEndpoint]
 }
 
@@ -40,58 +42,66 @@ const ENDPOINTS: Endpoint[] = [
     label: "Health",
     method: "GET",
     endpoint: "health",
-    path: "/api/health",
+    path: PATHS.health,
   },
   {
     label: "Submit",
     method: "POST",
     endpoint: "submit",
-    path: "/api/submit",
+    path: PATHS.submit,
     payload: { spec: sampleJobSpec, estimate: estimateCost(sampleJobSpec) } satisfies SubmitRequest,
   },
   {
     label: "Pull Work",
     method: "POST",
     endpoint: "pull-work",
-    path: "/api/pull-work",
+    path: PATHS["pull-work"],
     payload: { nodeId: "browser-node-demo", capabilityClass: "cpu_only" } satisfies PullWorkRequest,
   },
   {
     label: "Submit Result",
     method: "POST",
     endpoint: "submit-result",
-    path: "/api/submit-result",
+    path: PATHS["submit-result"],
     payload: { tileId: "tile-demo-001", resultHash: "stub-hash" } satisfies SubmitResultRequest,
   },
   {
     label: "Settle",
     method: "POST",
     endpoint: "settle",
-    path: "/api/settle",
+    path: PATHS.settle,
     payload: { jobId: "job-demo-001" } satisfies SettleRequest,
   },
   {
     label: "Parse Job",
     method: "POST",
     endpoint: "jobs/parse",
-    path: "/api/jobs/parse",
+    path: PATHS["jobs/parse"],
     payload: { prompt: "render a 4K deep zoom under two minutes" } satisfies ParseJobRequest,
   },
 ]
 
-async function callEndpoint(endpoint: Endpoint) {
-  const response = await fetch(endpoint.path, {
-    method: endpoint.method,
-    headers: endpoint.method === "POST" ? { "Content-Type": "application/json" } : undefined,
-    body: endpoint.method === "POST" ? JSON.stringify(endpoint.payload) : undefined,
-  })
-
-  return response.json() as Promise<ApiStubResponse>
+async function callEndpoint(endpoint: Endpoint): Promise<ApiClientResult<ApiEndpoint>> {
+  switch (endpoint.endpoint) {
+    case "health":
+      return getHealth()
+    case "submit":
+      return submitJob(endpoint.payload as SubmitRequest)
+    case "pull-work":
+      return pullWork(endpoint.payload as PullWorkRequest)
+    case "submit-result":
+      return submitResult(endpoint.payload as SubmitResultRequest)
+    case "settle":
+      return settle(endpoint.payload as SettleRequest)
+    case "jobs/parse":
+      return parseJob(endpoint.payload as ParseJobRequest)
+  }
 }
 
 export default function BackendSmokePage() {
   const [selected, setSelected] = useState(ENDPOINTS[0])
   const [result, setResult] = useState<unknown>(null)
+  const [meta, setMeta] = useState<{ status: number; latencyMs: number } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -99,12 +109,15 @@ export default function BackendSmokePage() {
     setSelected(endpoint)
     setLoading(true)
     setError(null)
+    setMeta(null)
 
     try {
-      const json = await callEndpoint(endpoint)
-      setResult(json)
+      const call = await callEndpoint(endpoint)
+      setResult(call.response)
+      setMeta({ status: call.status, latencyMs: call.latencyMs })
     } catch (err) {
       setResult(null)
+      setMeta(null)
       setError(err instanceof Error ? err.message : "Request failed")
     } finally {
       setLoading(false)
@@ -149,6 +162,19 @@ export default function BackendSmokePage() {
               <span className="font-mono text-sm text-foreground">{selected.path}</span>
               {loading && <span className="ml-auto font-mono text-xs text-muted-foreground">requesting...</span>}
             </div>
+
+            {meta && (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-border bg-secondary/40 p-3">
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-tertiary">HTTP status</p>
+                  <p className="mt-1 font-mono text-lg font-semibold text-foreground">{meta.status}</p>
+                </div>
+                <div className="rounded-xl border border-border bg-secondary/40 p-3">
+                  <p className="font-mono text-[10px] uppercase tracking-wider text-tertiary">Latency</p>
+                  <p className="mt-1 font-mono text-lg font-semibold text-foreground">{meta.latencyMs} ms</p>
+                </div>
+              </div>
+            )}
 
             {selected.payload !== undefined && (
               <div className="mt-4">
