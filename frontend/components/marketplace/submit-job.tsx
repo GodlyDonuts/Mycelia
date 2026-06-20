@@ -13,6 +13,7 @@ import {
   type JobType,
   type GpuTier,
 } from "@/lib/marketplace-data"
+import type { ApiStubResponse, SubmitRequest } from "@/lib/api-contracts"
 
 // ---- field primitives ----------------------------------------------------
 
@@ -93,17 +94,18 @@ export function SubmitJob() {
     setSubmitStatus(null)
 
     try {
+      const body: SubmitRequest = { spec: form, estimate: est }
       const response = await fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ spec: form, estimate: est }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
         throw new Error(`Submit endpoint returned ${response.status}`)
       }
 
-      const json = await response.json()
+      const json = await response.json() as ApiStubResponse<SubmitRequest>
       setSubmitted(true)
       setSubmitStatus(`${json.message ?? "Submit endpoint reached"} at ${json.timestamp ?? "now"}`)
     } catch (error) {

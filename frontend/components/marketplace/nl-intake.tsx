@@ -4,6 +4,7 @@ import { useState, useRef } from "react"
 import { Sparkles, ArrowUp, Wand2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { EXAMPLE_PROMPTS, parseJobFromPrompt, type JobFormState } from "@/lib/marketplace-data"
+import type { ApiStubResponse, ParseJobRequest } from "@/lib/api-contracts"
 
 /**
  * The magical centerpiece: a natural-language job intake.
@@ -42,10 +43,11 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
     }, 520)
 
     try {
+      const body: ParseJobRequest = { prompt: text }
       const response = await fetch("/api/jobs/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text }),
+        body: JSON.stringify(body),
       })
 
       await new Promise((resolve) => setTimeout(resolve, 1700))
@@ -54,7 +56,7 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
         throw new Error(`Parse endpoint returned ${response.status}`)
       }
 
-      await response.json()
+      await response.json() as ApiStubResponse<ParseJobRequest>
       setBackendStatus("/api/jobs/parse reached; using local mock spec until Claude is wired")
     } catch {
       setBackendStatus("Parse API unavailable; using local mock fallback")
