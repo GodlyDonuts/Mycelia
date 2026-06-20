@@ -8,13 +8,35 @@ export type ApiEndpoint =
   | "settle"
   | "jobs/parse"
 
-export type ApiStubResponse<TReceived = unknown> = {
+export const API_PATHS: Record<ApiEndpoint, string> = {
+  health: "/health",
+  submit: "/submit",
+  "pull-work": "/pull-work",
+  "submit-result": "/submit-result",
+  settle: "/settle",
+  "jobs/parse": "/jobs/parse",
+}
+
+export type ApiSuccessResponse<TData = unknown, TReceived = unknown> = {
   ok: true
   endpoint: ApiEndpoint
   message: string
+  data?: TData
   received?: TReceived
   timestamp: string
 }
+
+export type ApiErrorResponse = {
+  ok: false
+  endpoint: ApiEndpoint
+  error: string
+  details?: string[]
+  timestamp: string
+}
+
+export type ApiResponse<TData = unknown, TReceived = unknown> =
+  | ApiSuccessResponse<TData, TReceived>
+  | ApiErrorResponse
 
 export type SubmitRequest = {
   spec: JobFormState

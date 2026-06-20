@@ -116,7 +116,6 @@ export function EarningsChart({ data = EARNINGS_90D }: { data?: EarningsPoint[] 
                 fill="var(--color-accent)"
                 stroke="var(--color-background)"
                 strokeWidth={2}
-                isFront
               />
             ))}
           </AreaChart>
