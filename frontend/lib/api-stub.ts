@@ -1,15 +1,8 @@
 import { NextResponse } from "next/server"
+import type { ApiEndpoint, ApiStubResponse } from "@/lib/api-contracts"
 
-export type StubResponse = {
-  ok: true
-  endpoint: string
-  message: string
-  received?: unknown
-  timestamp: string
-}
-
-export function stubJson(endpoint: string, message: string, received?: unknown) {
-  const body: StubResponse = {
+export function stubJson<TReceived>(endpoint: ApiEndpoint, message: string, received?: TReceived) {
+  const body: ApiStubResponse<TReceived> = {
     ok: true,
     endpoint,
     message,
@@ -23,6 +16,6 @@ export function stubJson(endpoint: string, message: string, received?: unknown) 
   return NextResponse.json(body)
 }
 
-export async function readJsonBody(request: Request) {
-  return request.json().catch(() => null)
+export async function readJsonBody<TBody>(request: Request) {
+  return request.json().catch(() => null) as Promise<TBody | null>
 }

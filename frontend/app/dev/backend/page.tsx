@@ -2,49 +2,80 @@
 
 import { useState } from "react"
 import { AppShell } from "@/components/dashboard/app-shell"
+import type {
+  ApiEndpoint,
+  ApiRequestByEndpoint,
+  ApiStubResponse,
+  ParseJobRequest,
+  PullWorkRequest,
+  SettleRequest,
+  SubmitRequest,
+  SubmitResultRequest,
+} from "@/lib/api-contracts"
+import { estimateCost, type JobFormState } from "@/lib/marketplace-data"
 
-type Endpoint = {
+type Endpoint<TEndpoint extends ApiEndpoint = ApiEndpoint> = {
   label: string
   method: "GET" | "POST"
+  endpoint: TEndpoint
   path: string
-  payload?: unknown
+  payload?: ApiRequestByEndpoint[TEndpoint]
+}
+
+const sampleJobSpec: JobFormState = {
+  name: "demo fractal render",
+  type: "render",
+  image: "ghcr.io/mycelia/fractal:demo",
+  datasetUrl: "s3://mycelia-demo/fractal-params.json",
+  gpuTier: "4090",
+  vram: 24,
+  ram: 64,
+  maxRuntimeMin: 15,
+  replication: 3,
+  rewardBid: 120,
 }
 
 const ENDPOINTS: Endpoint[] = [
   {
     label: "Health",
     method: "GET",
+    endpoint: "health",
     path: "/api/health",
   },
   {
     label: "Submit",
     method: "POST",
+    endpoint: "submit",
     path: "/api/submit",
-    payload: { jobName: "demo fractal render", tiles: 64 },
+    payload: { spec: sampleJobSpec, estimate: estimateCost(sampleJobSpec) } satisfies SubmitRequest,
   },
   {
     label: "Pull Work",
     method: "POST",
+    endpoint: "pull-work",
     path: "/api/pull-work",
-    payload: { nodeId: "browser-node-demo", capabilityClass: "cpu_only" },
+    payload: { nodeId: "browser-node-demo", capabilityClass: "cpu_only" } satisfies PullWorkRequest,
   },
   {
     label: "Submit Result",
     method: "POST",
+    endpoint: "submit-result",
     path: "/api/submit-result",
-    payload: { tileId: "tile-demo-001", resultHash: "stub-hash" },
+    payload: { tileId: "tile-demo-001", resultHash: "stub-hash" } satisfies SubmitResultRequest,
   },
   {
     label: "Settle",
     method: "POST",
+    endpoint: "settle",
     path: "/api/settle",
-    payload: { jobId: "job-demo-001" },
+    payload: { jobId: "job-demo-001" } satisfies SettleRequest,
   },
   {
     label: "Parse Job",
     method: "POST",
+    endpoint: "jobs/parse",
     path: "/api/jobs/parse",
-    payload: { prompt: "render a 4K deep zoom under two minutes" },
+    payload: { prompt: "render a 4K deep zoom under two minutes" } satisfies ParseJobRequest,
   },
 ]
 
@@ -55,7 +86,7 @@ async function callEndpoint(endpoint: Endpoint) {
     body: endpoint.method === "POST" ? JSON.stringify(endpoint.payload) : undefined,
   })
 
-  return response.json()
+  return response.json() as Promise<ApiStubResponse>
 }
 
 export default function BackendSmokePage() {
