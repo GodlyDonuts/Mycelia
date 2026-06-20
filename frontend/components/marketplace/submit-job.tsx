@@ -63,6 +63,8 @@ export function SubmitJob() {
   const [form, setForm] = useState<JobFormState>({ ...EMPTY_JOB, name: "" })
   const [autofilled, setAutofilled] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<string | null>(null)
 
   const set = <K extends keyof JobFormState>(key: K, value: JobFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -82,6 +84,34 @@ export function SubmitJob() {
     maxRuntimeMin: form.maxRuntimeMin,
     replication: form.replication,
   })
+
+  const submit = async () => {
+    if (!valid || submitting) return
+
+    setSubmitting(true)
+    setSubmitted(false)
+    setSubmitStatus(null)
+
+    try {
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spec: form, estimate: est }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Submit endpoint returned ${response.status}`)
+      }
+
+      const json = await response.json()
+      setSubmitted(true)
+      setSubmitStatus(`${json.message ?? "Submit endpoint reached"} at ${json.timestamp ?? "now"}`)
+    } catch (error) {
+      setSubmitStatus(error instanceof Error ? error.message : "Submit request failed")
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <section aria-label="Submit a job" className="flex flex-col gap-4">
@@ -274,22 +304,32 @@ export function SubmitJob() {
       {/* ---- submit ---- */}
       <button
         type="button"
-        disabled={!valid}
-        onClick={() => setSubmitted(true)}
+        disabled={!valid || submitting}
+        onClick={submit}
         className={cn(
           "group flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all",
-          valid
+          valid && !submitting
             ? "bg-primary text-primary-foreground glow-teal hover:brightness-110"
             : "cursor-not-allowed bg-secondary text-tertiary",
         )}
       >
         <Send className="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
-        {submitted ? "Job submitted to the mesh" : `Submit job · ${form.rewardBid.toLocaleString()} MYC`}
+        {submitting
+          ? "Submitting to backend..."
+          : submitted
+            ? "Job submitted to the mesh"
+            : `Submit job · ${form.rewardBid.toLocaleString()} MYC`}
       </button>
-      {submitted && (
-        <p className="text-center font-mono text-[11px] text-primary [animation:fade-in-up_0.4s_ease-out]">
-          {/* POST /api/jobs — broadcasts the spec to the scheduler for matching. */}
-          Spec broadcast to the scheduler. Cultivator nodes are being matched…
+      {submitStatus && (
+        <p
+          className={cn(
+            "text-center font-mono text-[11px] [animation:fade-in-up_0.4s_ease-out]",
+            submitted ? "text-primary" : "text-destructive",
+          )}
+        >
+          {/* POST /api/submit currently proves frontend-to-backend communication only. */}
+          {submitted ? "Spec posted to /api/submit. " : "Submit failed. "}
+          {submitStatus}
         </p>
       )}
     </section>

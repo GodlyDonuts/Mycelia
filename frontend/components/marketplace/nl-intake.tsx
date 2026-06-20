@@ -24,11 +24,13 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
   const [prompt, setPrompt] = useState("")
   const [thinking, setThinking] = useState(false)
   const [stage, setStage] = useState<string>("")
+  const [backendStatus, setBackendStatus] = useState<string | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const run = (text: string) => {
+  const run = async (text: string) => {
     if (!text.trim() || thinking) return
     setThinking(true)
+    setBackendStatus(null)
 
     // Simulated streaming stages — replace with real token/stream events.
     const stages = ["Reading your request…", "Inferring GPU tier & resources…", "Drafting a validated job spec…"]
@@ -39,13 +41,30 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
       if (i < stages.length) setStage(stages[i])
     }, 520)
 
-    setTimeout(() => {
+    try {
+      const response = await fetch("/api/jobs/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: text }),
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 1700))
+
+      if (!response.ok) {
+        throw new Error(`Parse endpoint returned ${response.status}`)
+      }
+
+      await response.json()
+      setBackendStatus("/api/jobs/parse reached; using local mock spec until Claude is wired")
+    } catch {
+      setBackendStatus("Parse API unavailable; using local mock fallback")
+    } finally {
       clearInterval(tick)
       const spec = parseJobFromPrompt(text)
       onParsed(spec)
       setThinking(false)
       setStage("")
-    }, 1700)
+    }
   }
 
   return (
@@ -140,6 +159,12 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
               ))}
             </span>
           </div>
+        )}
+
+        {!thinking && backendStatus && (
+          <p className="mt-3 font-mono text-[10px] leading-relaxed text-tertiary [animation:fade-in-up_0.3s_ease-out]">
+            {backendStatus}
+          </p>
         )}
       </div>
     </div>
