@@ -13,7 +13,7 @@ import type { ParseJobRequest } from "@/lib/api-contracts"
  * On submit we currently MOCK the round-trip. In production `onParsed` is fed
  * by a call to the Claude structured-output endpoint:
  *
- *   const res = await fetch("/api/jobs/parse", {
+   *   const res = await fetch("/jobs/parse", {
  *     method: "POST",
  *     body: JSON.stringify({ prompt }),
  *   })
