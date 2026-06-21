@@ -14,7 +14,8 @@ This repo contains a **working end-to-end MVP** of the read path, the coordinato
 - **"Join the mesh" browser worker** — zero install. Computes real fractal tiles via a **WGSL WebGPU compute shader** (with live per-tile GPU time), feature-detecting down to a **CPU Web Worker**. Tiles are verified by the server's deterministic self-check and paid through the ledger.
 - **Natural-language job submission** — describe a job in plain English; **Claude Opus 4.8** structured output (when `ANTHROPIC_API_KEY` is set) shapes it into a schema-valid spec, re-validated by the same Zod schema that guards `/submit`. Falls back to a deterministic keyword parser with no key.
 - **Read-only MCP server** — `/api/mcp` exposes the mesh to agents as `get_mesh_status`, `list_nodes`, `get_job_progress`, `explain_settlement`. Read-only by design — the ledger stays server-authoritative.
-- **Four live screens** — Provider Dashboard, Compute Marketplace + Submit, Live Network Telemetry (the hero), and the Landing page, all reading live data.
+- **Distributed LoRA training** — a real, converging data-parallel fine-tune (frozen base + trainable adapter) with a **DiLoCo/FedAvg outer loop**, **canary-loss verification** (bad deltas genuinely rejected), and token-weighted payouts. The Network screen shows the live validation-loss drop, per-node contribution bars, and the Δ-rejected count — the training analogue of the fractal reassembly (ML_LAYER.md §9).
+- **Five live screens** — Provider Dashboard, Compute Marketplace + Submit, Live Network Telemetry (the hero), Settlement/Earnings Ledger, and the Landing page, all reading live data.
 
 ## The database: built real, AWS deferred
 
@@ -73,4 +74,4 @@ Key modules: [`lib/coordinator.ts`](frontend/lib/coordinator.ts), [`lib/driver.t
 
 ## Roadmap
 
-Tracked as GitHub issues across phase milestones (Phase 0 → 6 + the ML training layer). The hard, unbuilt work is the moat: untrusted-result verification (PoSP + refereed-delegation recompute), sandboxing untrusted code, the native daemon supply engine, and the distributed LoRA training layer. See [`PLAN.md`](PLAN.md) §10 and [`docs/ML_LAYER.md`](docs/ML_LAYER.md).
+Tracked as GitHub issues across phase milestones (Phase 0 → 6 + the ML training layer). The Regime-1 LoRA training slice is **built** (see above). The hard, unbuilt work is the moat: untrusted-result verification at scale (PoSP + refereed-delegation recompute, incl. for training), sandboxing untrusted code, the native daemon supply engine, and model-sharded training cells (pipeline/tensor parallel + P2P). See [`PLAN.md`](PLAN.md) §10, [`docs/ML_LAYER.md`](docs/ML_LAYER.md), and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §10.

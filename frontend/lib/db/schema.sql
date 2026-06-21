@@ -199,6 +199,20 @@ CREATE TABLE IF NOT EXISTS training_rounds (
   UNIQUE (job_id, round_index)
 );
 
+CREATE TABLE IF NOT EXISTS cells (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_id           UUID NOT NULL,
+  round_id         UUID NOT NULL,
+  kind             TEXT NOT NULL DEFAULT 'solo' CHECK (kind IN ('solo','pipeline')),
+  member_node_ids  UUID[],
+  capability_class TEXT,
+  data_shard_ref   TEXT,
+  status           TEXT NOT NULL DEFAULT 'forming'
+                     CHECK (status IN ('forming','assigned','training','submitted','dropped')),
+  assigned_at      TIMESTAMPTZ,
+  deadline_at      TIMESTAMPTZ
+);
+
 CREATE TABLE IF NOT EXISTS contributions (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   round_id         UUID NOT NULL,
