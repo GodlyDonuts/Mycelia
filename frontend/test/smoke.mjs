@@ -132,6 +132,12 @@ async function main() {
   const toolList = await post("/api/mcp", { jsonrpc: "2.0", id: 10, method: "tools/list" })
   ok("MCP exposes 7 read-only tools", toolList.body?.result?.tools?.length === 7, `count=${toolList.body?.result?.tools?.length}`)
 
+  // 8c. second workload class + the refereed-recompute moat
+  const mc = (await j("/api/montecarlo")).body
+  ok("Monte Carlo workload verifies honest + rejects tampered", !!mc && mc.verified > 0 && mc.rejected >= 1, JSON.stringify(mc))
+  const ref = (await j("/api/verify/referee")).body
+  ok("refereed recompute convicts a cheater with ~log cost", !!ref && ref.agree === false && ref.rowsRecomputed === 1 && ref.comparisons <= 8, JSON.stringify(ref))
+
   // 9. input hardening — malformed bodies rejected with 400
   const badSubmit = await post("/api/submit", { name: "x" })
   ok("malformed /submit rejected (400)", badSubmit.status === 400, `status=${badSubmit.status}`)

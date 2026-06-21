@@ -6,6 +6,7 @@ import { MyceliumGraph } from "@/components/network/mycelium-graph"
 import { LiveRenderPanel } from "@/components/network/live-render-panel"
 import { TrainingPanel } from "@/components/network/training-panel"
 import { UtilizationChart } from "@/components/network/utilization-chart"
+import { WorkloadsPanel } from "@/components/network/workloads-panel"
 import { NetworkEventLog } from "@/components/network/network-event-log"
 
 export const metadata: Metadata = {
@@ -49,6 +50,9 @@ export default function NetworkPage() {
           <TrainingPanel />
           <UtilizationChart />
         </div>
+
+        {/* workload classes + a second live verifiable workload (Monte Carlo) */}
+        <WorkloadsPanel />
 
         {/* event feed */}
         <NetworkEventLog />
