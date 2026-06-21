@@ -30,7 +30,7 @@ jobs:
       - run: pnpm build
 
   smoke:
-    name: Live integration smoke
+    name: Live integration · smoke · state-machine · fuzz
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
-      - name: Start server + run smoke
+      - name: Start server + run live invariant suites
         run: |
           pnpm start &
           SERVER_PID=$!
@@ -53,7 +53,15 @@ jobs:
             if curl -sf -o /dev/null http://localhost:3000/api/stats; then echo "up"; break; fi
             sleep 1
           done
-          node test/smoke.mjs
-          STATUS=$?
+          STATUS=0
+          # smoke (API / SSE / workload-policy checks)
+          node test/smoke.mjs || STATUS=$?
+          # claim/verify state-machine invariants — the /submit rate limiter is
+          # 20/min/IP and both these suites submit jobs, so space them out.
+          sleep 62
+          node test/statemachine.mjs || STATUS=$?
+          sleep 62
+          # ledger property/fuzz — economic invariants across randomized interleavings
+          ITERS=40 node test/fuzz.mjs || STATUS=$?
           kill $SERVER_PID 2>/dev/null || true
           exit $STATUS
