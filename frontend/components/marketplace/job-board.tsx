@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from "react"
 import { Search, SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { usePoll } from "@/lib/api"
 import { JobCard } from "./job-card"
 import {
   JOB_LISTINGS,
@@ -62,12 +63,16 @@ function Select<T extends string>({
  * the scheduler's job-board feed (WebSocket/SSE) so listings, progress bars,
  * and statuses update in place.
  */
-export function JobBoard({ jobs = JOB_LISTINGS }: { jobs?: JobListing[] }) {
+export function JobBoard() {
   const [mounted, setMounted] = useState(false)
   const [query, setQuery] = useState("")
   const [type, setType] = useState<JobType | "all">("all")
   const [tier, setTier] = useState<GpuTier | "all">("all")
   const [reward, setReward] = useState("any")
+
+  // Live job-board feed (PLAN.md §6): replaces the static mock.
+  const { data } = usePoll<{ listings: JobListing[] }>("/api/marketplace", 3000)
+  const jobs = data?.listings ?? JOB_LISTINGS
 
   useEffect(() => setMounted(true), [])
 
