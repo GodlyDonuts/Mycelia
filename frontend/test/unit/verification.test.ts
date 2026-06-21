@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { spotCheckRate, effReplication, sellableFraction, unitEconomics } from "@/lib/verification"
+import { spotCheckRate, effReplication, sellableFraction, unitEconomics, effectiveSpotCheckRate, forcesTrustedRecompute, HIGH_VALUE_MYC, LOW_VALUE_MYC } from "@/lib/verification"
 
 describe("verification economics", () => {
   it("spot-check rate falls as reputation rises (proven ~5%, unproven ~100%)", () => {
@@ -35,5 +35,24 @@ describe("verification economics", () => {
   it("net improves with a higher sellable fraction and cheaper power", () => {
     expect(unitEconomics(0.12, 0.9).net).toBeGreaterThan(unitEconomics(0.12, 0.5).net)
     expect(unitEconomics(0.12, 0.9).net).toBeGreaterThan(unitEconomics(0.3, 0.9).net)
+  })
+
+  it("trusted-recompute backstop: high-value jobs force full verification regardless of reputation (#86)", () => {
+    // a proven node is lightly sampled on a cheap job...
+    expect(effectiveSpotCheckRate(100, LOW_VALUE_MYC)).toBeCloseTo(spotCheckRate(100), 5)
+    // ...but a high-value job forces a trusted recompute even for a proven node
+    expect(effectiveSpotCheckRate(100, HIGH_VALUE_MYC)).toBe(1)
+    expect(forcesTrustedRecompute(HIGH_VALUE_MYC)).toBe(true)
+    expect(forcesTrustedRecompute(HIGH_VALUE_MYC - 1)).toBe(false)
+  })
+
+  it("verification floor ramps monotonically with job value", () => {
+    const rep = 100
+    const vals = [LOW_VALUE_MYC, 200, 300, 400, HIGH_VALUE_MYC]
+    for (let i = 1; i < vals.length; i++) {
+      expect(effectiveSpotCheckRate(rep, vals[i])).toBeGreaterThanOrEqual(effectiveSpotCheckRate(rep, vals[i - 1]))
+    }
+    // the value floor can only raise a node's base rate, never lower it
+    expect(effectiveSpotCheckRate(0, 300)).toBeGreaterThanOrEqual(spotCheckRate(0))
   })
 })

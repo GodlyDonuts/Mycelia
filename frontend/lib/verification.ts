@@ -17,6 +17,27 @@ export function spotCheckRate(reputation: number): number {
   return Math.max(0.05, Math.min(1, 0.05 + (1 - r / 100) * 0.95))
 }
 
+// Trusted-recompute backstop for high-value jobs & collusion (PLAN §8, #86).
+// Reputation lowers a node's spot-check rate — which is exactly what a patient
+// attacker farms before cheating on one big payout, and what colluding voters
+// exploit. So job VALUE raises the verification floor independently of
+// reputation: between LOW and HIGH value the floor ramps up, and at/above
+// HIGH_VALUE_MYC every result is recomputed by a trusted referee (rate → 1).
+export const LOW_VALUE_MYC = 100
+export const HIGH_VALUE_MYC = 500
+
+/** Spot-check rate a node faces on a job of a given value (≥ its reputation rate). */
+export function effectiveSpotCheckRate(reputation: number, jobValueMyc: number): number {
+  if (jobValueMyc >= HIGH_VALUE_MYC) return 1 // mandatory trusted recompute
+  const ramp = Math.min(1, Math.max(0, (jobValueMyc - LOW_VALUE_MYC) / (HIGH_VALUE_MYC - LOW_VALUE_MYC)))
+  return Math.max(spotCheckRate(reputation), ramp) // value floor can only raise the rate
+}
+
+/** Above the high-value threshold, a trusted referee recomputes every result. */
+export function forcesTrustedRecompute(jobValueMyc: number): boolean {
+  return jobValueMyc >= HIGH_VALUE_MYC
+}
+
 /** Effective replication tax: ~1.05x for proven nodes, ~2.0x for unproven. */
 export function effReplication(reputation: number): number {
   const r = Math.max(0, Math.min(100, reputation))
