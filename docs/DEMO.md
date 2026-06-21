@@ -54,8 +54,9 @@ Open `http://localhost:3000`. The in-memory DB migrates + seeds on the first req
 ```bash
 cd frontend
 pnpm test          # 52 Vitest unit tests (kernel, training, referee, compression, pipeline, sandbox, auth, economics, Monte Carlo, regions)
-pnpm test:smoke    # 29 live checks: escrow, overdraft, cheat-rejection + slash, verify+pay, idempotency,
-                   # idempotency, training convergence, reconciliation, hardening, MCP
+pnpm test:smoke    # 29 live checks: escrow, overdraft, cheat-rejection + slash, verify+pay,
+                   # idempotency, training, reconciliation, refereed recompute, Monte Carlo,
+                   # role gating, redemption, hardening, MCP
 ```
 
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) for how it all works and the Aurora DSQL swap path.
