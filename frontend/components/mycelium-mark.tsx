@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 /**
  * MyceliumMark — the brand glyph: one lit jade node with thin threads
  * reaching out to small neutral spores. Delicate line-work, not a glowing web.
@@ -38,7 +40,7 @@ export function MyceliumMark({
 
 export function Wordmark({ className }: { className?: string }) {
   return (
-    <a
+    <Link
       href="/"
       aria-label="Mycelia home"
       className={`flex items-center gap-2.5 ${className ?? ""}`}
@@ -47,6 +49,6 @@ export function Wordmark({ className }: { className?: string }) {
       <span className="font-display text-[17px] tracking-[-0.01em] text-foreground">
         Mycelia
       </span>
-    </a>
+    </Link>
   )
 }

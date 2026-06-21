@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import {
   LayoutDashboard,
   Store,
@@ -63,10 +64,10 @@ function NavList({ active = "Dashboard", onNavigate }: { active?: string; onNavi
 
 function Brand() {
   return (
-    <a href="/" className="flex items-center gap-2.5" aria-label="Mycelia home">
+    <Link href="/" className="flex items-center gap-2.5" aria-label="Mycelia home">
       <MyceliumMark className="text-foreground" size={20} />
       <span className="font-display text-[17px] tracking-[-0.01em] text-foreground">Mycelia</span>
-    </a>
+    </Link>
   )
 }
 
