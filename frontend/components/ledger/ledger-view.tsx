@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Coins, ArrowDownRight, ArrowUpRight, Lock, Landmark, Wallet } from "lucide-react"
 import { usePoll } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { RedeemPanel } from "@/components/ledger/redeem-panel"
 
 interface LedgerData {
   requester: { ledgerSum: number; available: number | null; reserved: number | null }
@@ -122,6 +123,9 @@ export function LedgerView() {
           </ul>
         </div>
       </div>
+
+      {/* MYC redemption / cash-out */}
+      <RedeemPanel />
     </div>
   )
 }

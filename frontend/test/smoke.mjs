@@ -148,6 +148,15 @@ async function main() {
   })
   ok("signed-in Provider is blocked from submitting (403)", provSubmit.status === 403, `status=${provSubmit.status} cookie=${!!cookie}`)
 
+  // 8e. MYC redemption / wallet
+  const w0 = (await j("/api/wallet")).body
+  const red = await post("/api/wallet/redeem", { amount: 10, method: "bank" })
+  ok("redeem succeeds + records a cash-out", red.body?.ok === true && red.body.usd === 1.2, JSON.stringify(red.body))
+  const w1 = (await j("/api/wallet")).body
+  ok("wallet balance decreases by the redeemed amount", w1.balance === w0.balance - 10, `${w0?.balance} -> ${w1?.balance}`)
+  const overRedeem = await post("/api/wallet/redeem", { amount: (w1.balance || 0) + 100000, method: "crypto" })
+  ok("over-balance redemption rejected (402)", overRedeem.status === 402, `status=${overRedeem.status}`)
+
   // 9. input hardening — malformed bodies rejected with 400
   const badSubmit = await post("/api/submit", { name: "x" })
   ok("malformed /submit rejected (400)", badSubmit.status === 400, `status=${badSubmit.status}`)

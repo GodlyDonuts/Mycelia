@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
   tile_id         UUID,
   amount_myc      NUMERIC NOT NULL,              -- SIGNED: debit negative, credit positive
   entry_type      TEXT NOT NULL
-                    CHECK (entry_type IN ('escrow_hold','escrow_release','provider_earn','platform_fee','refund','slash')),
+                    CHECK (entry_type IN ('escrow_hold','escrow_release','provider_earn','platform_fee','refund','slash','redeem')),
   idempotency_key TEXT NOT NULL UNIQUE,
   memo            TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
