@@ -100,7 +100,17 @@ Only [`frontend/lib/db/index.ts`](../frontend/lib/db/index.ts) changes: replace 
 - **WebGPU is f32**, the reference is f64 — rely on `verifyTile`'s tolerance, don't expect exact hash matches from the GPU path.
 - The DB is **in-memory** by default (re-seeds on restart). Set `MYCELIA_DB_DIR` to persist.
 
-## 10. What's live vs roadmap
+## 10. Distributed training (the AI/ML backend)
 
-**Live:** coordinator, escrow-until-verified ledger, real fractal fan-out + reassembly, WebGPU/CPU browser worker, NL submission, read-only MCP, five screens.
-**Roadmap (the moat, unbuilt):** untrusted-result verification (PoSP + refereed-delegation recompute), WASM/Firecracker sandboxing, the native daemon supply engine, SSE-on-Fluid transport, S3 blob pipeline, and the distributed LoRA training layer ([`ML_LAYER.md`](ML_LAYER.md)). Tracked in GitHub issues under the phase milestones.
+A second live workload class implementing the Regime-1 demo slice of [`ML_LAYER.md`](ML_LAYER.md): **data-parallel LoRA fine-tuning with a DiLoCo/FedAvg outer loop and canary-loss verification.** Real, converging, in-process.
+
+- **Model** ([`lib/training/model.ts`](../frontend/lib/training/model.ts)): a *frozen base* (fixed random feature projection) + a *trainable low-rank adapter* — the LoRA-spirit setup shrunk to a tractable supervised task so it runs in-process and converges visibly (val loss ~0.13 → ~0.005 over a handful of rounds). Real SGD for local steps; **token-weighted FedAvg** and a **DiLoCo** outer optimizer (Nesterov momentum on the averaged pseudo-gradient). Only the inner workload is small — the outer loop is the real architecture; a Python PyTorch+PEFT worker would implement the same pull/contribute contract.
+- **Lifecycle** ([`lib/training/coordinator.ts`](../frontend/lib/training/coordinator.ts)): `submitTrainingJob` (escrow) → per-round **cell formation** (Regime 1: one node per cell, heterogeneous shards) → `pullRoundTask` → local SGD → `submitContribution` (**canary-loss verification** + cosine sanity → accept/reject) → **aggregation worker** (token-weighted FedAvg → new global adapter, validation loss, token-weighted payouts) → next round until target loss / max rounds. Bounded-staleness flush handles dropped nodes.
+- **Verification** (ML_LAYER §7, demo-grade): a contribution is accepted only if its adapter holds-or-reduces loss on a coordinator-controlled **canary batch** within a relative tolerance; garbage/poisoned deltas blow the canary up and are rejected. (Refereed-recompute is roadmap.)
+- **Driver** ([`lib/training/driver.ts`](../frontend/lib/training/driver.ts)): simulates heterogeneous cells running real SGD, injecting one deliberately-bad delta per ~most rounds so the canary rejection is visible on stage.
+- **API:** `POST /api/training/submit` · `POST /api/training/pull` · `POST /api/training/submit-contribution` · `GET /api/training/active`. **UI:** the **Distributed Training** panel on the Network screen shows the live loss-drop curve, token-weighted contribution bars, and the "Δ rejected" count.
+
+## 11. What's live vs roadmap
+
+**Live:** coordinator, escrow-until-verified ledger, real fractal fan-out + reassembly, WebGPU/CPU browser worker, NL submission, read-only MCP, **distributed LoRA training (DiLoCo/FedAvg + canary verification)**, five screens.
+**Roadmap (the moat, unbuilt):** untrusted-result verification at scale (PoSP + refereed-delegation recompute, incl. refereed-recompute for training), WASM/Firecracker sandboxing, the native daemon supply engine, model-sharded training cells (pipeline/tensor parallel) + P2P, communication compression, SSE-on-Fluid transport, and the S3 blob pipeline. Tracked in GitHub issues under the phase milestones.

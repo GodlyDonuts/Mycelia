@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { LogIn, LogOut, Share2, CheckCircle2, Layers, Coins, XCircle, Activity } from "lucide-react"
+import { LogIn, LogOut, Share2, CheckCircle2, Layers, Coins, XCircle, Activity, Brain, ShieldX } from "lucide-react"
 import { useNetwork } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -11,7 +11,9 @@ const KIND_META: Record<string, { icon: typeof LogIn; tint: string; verb: string
   fanout: { icon: Share2, tint: "text-primary", verb: "fanned out" },
   "tile-verified": { icon: CheckCircle2, tint: "text-primary", verb: "verified" },
   "tile-rejected": { icon: XCircle, tint: "text-status-offline", verb: "rejected" },
-  "round-aggregated": { icon: Layers, tint: "text-accent", verb: "settled" },
+  "round-aggregated": { icon: Layers, tint: "text-accent", verb: "aggregated" },
+  "delta-accepted": { icon: Brain, tint: "text-primary", verb: "" },
+  "delta-rejected": { icon: ShieldX, tint: "text-status-offline", verb: "" },
   credited: { icon: Coins, tint: "text-accent", verb: "earned" },
 }
 const FALLBACK = { icon: Activity, tint: "text-muted-foreground", verb: "" }

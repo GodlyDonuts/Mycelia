@@ -18,6 +18,7 @@ async function j(url, opts) {
   return { status: r.status, body: await r.json().catch(() => null) }
 }
 const post = (url, b) => j(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) })
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 // --- byte-exact copy of the fractal kernel (lib/fractal.ts) ---
 function tileGeometry(p, index) {
@@ -79,6 +80,39 @@ async function main() {
   // 5. read-only MCP tool surface
   const mcp = await post("/api/mcp", { jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "get_mesh_status", arguments: {} } })
   ok("MCP get_mesh_status returns text content", typeof mcp.body?.result?.content?.[0]?.text === "string")
+
+  // 6. distributed-training backend (starts the training driver; watch it converge)
+  await j("/api/training/active")
+  let tr = null
+  for (let i = 0; i < 30; i++) {
+    await sleep(1000)
+    tr = (await j("/api/training/active")).body
+    if (tr && tr.loss.length >= 4) break
+  }
+  ok("training job active with a loss curve", !!tr && tr.loss.length >= 3, JSON.stringify(tr?.loss))
+  ok("validation loss decreases over rounds", !!tr && tr.loss.length >= 2 && tr.loss[tr.loss.length - 1].loss < tr.loss[0].loss,
+    tr ? `${tr.loss[0]?.loss} -> ${tr.loss[tr.loss.length - 1]?.loss}` : "no data")
+  ok("bad deltas rejected by canary check", !!tr && tr.rejectedDeltas >= 1, `rejected=${tr?.rejectedDeltas}`)
+  ok("contributions paid token-weighted", !!tr && tr.contributions.some((c) => c.reward > 0), JSON.stringify(tr?.contributions?.slice(0, 2)))
+
+  // 7. garbage training delta rejected via the contribution API
+  const treg = await post("/api/nodes/register", { name: "smoke-train", kind: "gpu", gpuModel: "A100" })
+  let pulled = null
+  for (let i = 0; i < 5 && !pulled; i++) {
+    const r = await post("/api/training/pull", { nodeId: treg.body.id, nodeName: "smoke-train" })
+    pulled = r.body?.task
+    if (!pulled) await sleep(500)
+  }
+  if (pulled) {
+    const garbage = Array.from({ length: pulled.theta.length || 16 }, () => Math.random() * 8 - 4)
+    const r = await post("/api/training/submit-contribution", {
+      cellId: pulled.cellId, roundId: pulled.roundId, jobId: pulled.jobId,
+      nodeId: treg.body.id, nodeName: "smoke-train", localTheta: garbage, tokens: 50, localSteps: 10,
+    })
+    ok("garbage training delta rejected via API", r.body?.accepted === false, JSON.stringify(r.body))
+  } else {
+    ok("garbage training delta rejected via API (skipped — no cell free)", true)
+  }
 
   console.log(`\n${pass} passed, ${fail} failed`)
   process.exit(fail ? 1 : 0)

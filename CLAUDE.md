@@ -37,6 +37,6 @@ Request flow: client (polling reads + POST) → route handlers in `app/api/*` �
 
 ## Status
 
-**Live:** coordinator (`/submit`,`/pull-work`,`/submit-result`,`/settle`), escrow-until-verified ledger, real fractal fan-out + reassembly, WebGPU/CPU browser worker, NL submission (Claude + fallback), read-only MCP (`/api/mcp`), five screens (dashboard, marketplace, network, landing, ledger).
+**Live:** coordinator (`/submit`,`/pull-work`,`/submit-result`,`/settle`), escrow-until-verified ledger, real fractal fan-out + reassembly, WebGPU/CPU browser worker, NL submission (Claude + fallback), read-only MCP (`/api/mcp`), **distributed LoRA training** (`lib/training/*`: DiLoCo/FedAvg outer loop + canary-loss verification + token-weighted payouts; `/api/training/*`; live loss-drop panel), five screens.
 
-**Roadmap (unbuilt — the moat):** untrusted-result verification (PoSP + refereed recompute), sandboxing, native daemon, SSE-on-Fluid, S3 blobs, distributed LoRA training (`docs/ML_LAYER.md`). Tracked as GitHub issues under phase milestones; implemented ones are closed with code pointers.
+**Roadmap (unbuilt — the moat):** untrusted-result verification at scale (PoSP + refereed recompute, incl. for training), sandboxing, native daemon, model-sharded training cells + P2P, comm compression, SSE-on-Fluid, S3 blobs. Tracked as GitHub issues under phase milestones; implemented ones are closed with code pointers. See `docs/ML_LAYER.md` for the training design and `docs/ARCHITECTURE.md` §10 for what's built.
