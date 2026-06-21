@@ -120,6 +120,18 @@ async function main() {
   const health = (await j("/api/health")).body
   ok("ledger reconciliation sweep holds (no overdraft, escrow covers payouts)", health?.reconciliation?.ok === true, JSON.stringify(health?.reconciliation))
 
+  // 8b. live transport + agentic surface + artifacts
+  const sse = await fetch(BASE + "/api/network/stream")
+  ok("SSE stream returns an event-stream", (sse.headers.get("content-type") || "").includes("text/event-stream"), sse.headers.get("content-type") || "none")
+  sse.body?.cancel?.()
+  const adapter = await fetch(BASE + "/api/training/adapter")
+  const adapterJson = await adapter.json().catch(() => null)
+  ok("trained adapter is downloadable", adapter.ok && Array.isArray(adapterJson?.adapter), `status=${adapter.status}`)
+  const econTool = await post("/api/mcp", { jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "get_economics", arguments: {} } })
+  ok("MCP get_economics returns text", typeof econTool.body?.result?.content?.[0]?.text === "string")
+  const toolList = await post("/api/mcp", { jsonrpc: "2.0", id: 10, method: "tools/list" })
+  ok("MCP exposes 7 read-only tools", toolList.body?.result?.tools?.length === 7, `count=${toolList.body?.result?.tools?.length}`)
+
   // 9. input hardening — malformed bodies rejected with 400
   const badSubmit = await post("/api/submit", { name: "x" })
   ok("malformed /submit rejected (400)", badSubmit.status === 400, `status=${badSubmit.status}`)
