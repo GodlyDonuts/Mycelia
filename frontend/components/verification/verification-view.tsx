@@ -1,6 +1,6 @@
 "use client"
 
-import { ShieldCheck, ShieldX, Gauge, Coins, TrendingUp, TrendingDown, Crosshair } from "lucide-react"
+import { ShieldCheck, ShieldX, Gauge, Coins, TrendingUp, TrendingDown, Crosshair, Lock } from "lucide-react"
 import { usePoll } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -47,6 +47,46 @@ function RefereeCard() {
       ) : (
         <p className="font-mono text-[12px] text-tertiary">running a live challenge…</p>
       )}
+    </div>
+  )
+}
+
+interface SandboxData {
+  benign: { ok: boolean; value: number; ms: number }
+  denied: { denied: boolean; error: string; ms: number }
+  runaway: { killed: boolean; ms: number }
+}
+
+function SandboxCard() {
+  const { data } = usePoll<SandboxData>("/api/sandbox/demo", 6000)
+  const Row = ({ pass, label, detail }: { pass: boolean; label: string; detail: string }) => (
+    <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/30 p-3">
+      {pass ? <ShieldCheck className="size-4 text-primary" /> : <ShieldX className="size-4 text-status-offline" />}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs text-foreground">{label}</p>
+        <p className="truncate font-mono text-[10px] text-tertiary">{detail}</p>
+      </div>
+    </div>
+  )
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <Lock className="size-4 text-primary" />
+        <h2 className="text-sm font-medium text-foreground">Host protection · capability sandbox</h2>
+        <span className="ml-auto font-mono text-[11px] text-tertiary">untrusted jobs run capability-denied + capped</span>
+      </div>
+      {data ? (
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <Row pass={data.benign.ok} label="Benign kernel runs" detail={`returned ${data.benign.value} in ${data.benign.ms}ms`} />
+          <Row pass={data.denied.denied} label="Filesystem access denied" detail={data.denied.error || "no ambient authority"} />
+          <Row pass={data.runaway.killed} label="Runaway loop killed" detail={`time cap hit at ${data.runaway.ms}ms`} />
+        </div>
+      ) : (
+        <p className="font-mono text-[12px] text-tertiary">running sandbox checks…</p>
+      )}
+      <p className="mt-3 font-mono text-[10px] text-tertiary">
+        Slice of the Wasmtime/WASI design (Firecracker/gVisor for native/GPU jobs) — capability model + resource caps.
+      </p>
     </div>
   )
 }
@@ -170,6 +210,9 @@ export function VerificationView() {
 
       {/* refereed-delegation recompute — logarithmic verification */}
       <RefereeCard />
+
+      {/* host protection — capability sandbox for untrusted jobs */}
+      <SandboxCard />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* reputation leaderboard */}
