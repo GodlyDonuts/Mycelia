@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { AppShell } from "@/components/dashboard/app-shell"
 import { JobBoard } from "@/components/marketplace/job-board"
 import { SubmitJob } from "@/components/marketplace/submit-job"
+import { MarketBand } from "@/components/marketplace/market-band"
 
 export const metadata: Metadata = {
   title: "Marketplace — Mycelia",
@@ -22,6 +23,9 @@ export default function MarketplacePage() {
             runnable spec.
           </p>
         </div>
+
+        {/* live supply vs demand */}
+        <MarketBand />
 
         {/* two-pane responsive layout: job board (left) · submit (right) */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_28rem] xl:grid-cols-[minmax(0,1fr)_32rem]">

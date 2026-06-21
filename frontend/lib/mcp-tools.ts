@@ -4,7 +4,9 @@
 // is deliberately not exposed.
 
 import { query, queryOne, num } from "./db"
-import { getNetwork } from "./reads"
+import { getNetwork, getMarketplace } from "./reads"
+import { getActiveTraining } from "./training/coordinator"
+import { getVerification } from "./verification"
 
 export const TOOLS = [
   {
@@ -39,6 +41,21 @@ export const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: "get_market",
+    description: "Marketplace supply vs demand: supply/demand units, clearing price, and jobs running/queued.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_training_status",
+    description: "Status of the active distributed LoRA training job: base model, round, validation loss, and rejected deltas.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_economics",
+    description: "The verification & economics snapshot: sellable fraction, verification tax, stake at risk, cheats slashed, and the live contributor net for proven vs unproven nodes.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
 ] as const
 
 export async function callTool(name: string, args: Record<string, unknown>): Promise<string> {
@@ -51,9 +68,46 @@ export async function callTool(name: string, args: Record<string, unknown>): Pro
       return getJobProgress(typeof args.jobId === "string" ? args.jobId : undefined)
     case "explain_settlement":
       return explainSettlement(typeof args.jobId === "string" ? args.jobId : undefined)
+    case "get_market":
+      return getMarket()
+    case "get_training_status":
+      return getTrainingStatus()
+    case "get_economics":
+      return getEconomics()
     default:
       throw new Error(`unknown tool: ${name}`)
   }
+}
+
+async function getMarket(): Promise<string> {
+  const m = await getMarketplace()
+  const open = m.listings.filter((l) => l.status === "open" || l.status === "queued").length
+  const running = m.listings.filter((l) => l.status === "running").length
+  return [
+    `Mycelia marketplace:`,
+    `• supply ${m.market.supply.toLocaleString()} units · demand ${m.market.demand.toLocaleString()} units`,
+    `• clearing price ${m.market.clearingPrice} MYC/unit`,
+    `• ${running} jobs running, ${open} open/queued (of ${m.listings.length} listed)`,
+  ].join("\n")
+}
+
+async function getTrainingStatus(): Promise<string> {
+  const t = await getActiveTraining()
+  if (!t) return "No active training job."
+  return `Training "${t.name}" (${t.baseModel}, LoRA r${t.rank}): round ${t.round}/${t.maxRounds}, val_loss ${t.valLoss != null ? t.valLoss.toFixed(4) : "—"}, status=${t.status}, ${t.rejectedDeltas} deltas rejected by the canary check.`
+}
+
+async function getEconomics(): Promise<string> {
+  const v = await getVerification()
+  const proven = v.economics.regimes.find((r) => r.label.startsWith("Proven") && r.kwh === 0.12)
+  const unproven = v.economics.regimes.find((r) => r.label.startsWith("Unproven") && r.kwh === 0.3)
+  return [
+    `Mycelia trust & economics:`,
+    `• sellable fraction ${v.sellableFraction}% (verification tax ${v.verificationTax}%)`,
+    `• stake at risk ${v.totalStake.toLocaleString()} MYC · ${v.cheatsCaught} cheats slashed (−${v.totalSlashed} MYC)`,
+    `• contributor NET/node-hour: proven node @ $0.12/kWh = ${proven ? "$" + proven.net.toFixed(3) : "—"}; unproven @ $0.30/kWh = ${unproven ? "$" + unproven.net.toFixed(3) : "—"}`,
+    `• the sellable fraction is the dominant lever — better verification → less replication tax → more sellable compute.`,
+  ].join("\n")
 }
 
 async function getMeshStatus(): Promise<string> {
