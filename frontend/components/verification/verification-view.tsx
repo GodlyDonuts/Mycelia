@@ -1,6 +1,6 @@
 "use client"
 
-import { ShieldCheck, ShieldX, Gauge, Coins, TrendingUp, TrendingDown, Crosshair, Lock } from "lucide-react"
+import { ShieldCheck, ShieldX, Gauge, Coins, TrendingUp, TrendingDown, Crosshair, Lock, Globe, Moon } from "lucide-react"
 import { usePoll } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -86,6 +86,54 @@ function SandboxCard() {
       )}
       <p className="mt-3 font-mono text-[10px] text-tertiary">
         Slice of the Wasmtime/WASI design (Firecracker/gVisor for native/GPU jobs) — capability model + resource caps.
+      </p>
+    </div>
+  )
+}
+
+interface RegionRow { name: string; kwh: number; renewablePct: number; offPeak: boolean; net: number; multiplier: number }
+
+function RegionsCard() {
+  const { data } = usePoll<{ utcHour: number; regions: RegionRow[] }>("/api/regions", 30000)
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <Globe className="size-4 text-primary" />
+        <h2 className="text-sm font-medium text-foreground">Region-aware payouts</h2>
+        <span className="ml-auto font-mono text-[11px] text-tertiary">NET = gross − local electricity · off-peak gets a bonus{data ? ` · ${String(data.utcHour).padStart(2, "0")}:00 UTC` : ""}</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left font-mono text-[12px]">
+          <thead>
+            <tr className="text-tertiary">
+              <th className="py-1.5 pr-3 font-normal">region</th>
+              <th className="py-1.5 pr-3 font-normal">$/kWh</th>
+              <th className="py-1.5 pr-3 font-normal">renewable</th>
+              <th className="py-1.5 pr-3 font-normal">window</th>
+              <th className="py-1.5 pr-3 font-normal">NET / node-hr</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(data?.regions ?? []).map((r) => (
+              <tr key={r.name} className="border-t border-border/60">
+                <td className="py-1.5 pr-3 text-foreground">{r.name}</td>
+                <td className="py-1.5 pr-3 tabular-nums text-muted-foreground">${r.kwh.toFixed(2)}</td>
+                <td className="py-1.5 pr-3 tabular-nums text-muted-foreground">{r.renewablePct}%</td>
+                <td className="py-1.5 pr-3">
+                  {r.offPeak ? (
+                    <span className="inline-flex items-center gap-1 text-primary"><Moon className="size-3" /> off-peak ×{r.multiplier}</span>
+                  ) : (
+                    <span className="text-tertiary">peak</span>
+                  )}
+                </td>
+                <td className={cn("py-1.5 pr-3 tabular-nums", r.net > 0 ? "text-primary" : "text-status-offline")}>{r.net >= 0 ? "+" : ""}${r.net.toFixed(3)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 font-mono text-[10px] text-tertiary">
+        We recruit GPU + cheap-power + proven supply, and pay a bonus for off-peak/renewable windows — shifting <em>when</em> and <em>where</em> the incremental draw lands.
       </p>
     </div>
   )
@@ -207,6 +255,9 @@ export function VerificationView() {
           replication tax) is the whole business.
         </p>
       </div>
+
+      {/* region-aware payouts + off-peak scheduling */}
+      <RegionsCard />
 
       {/* refereed-delegation recompute — logarithmic verification */}
       <RefereeCard />
