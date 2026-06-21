@@ -26,11 +26,11 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
   const [stage, setStage] = useState<string>("")
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const run = (text: string) => {
+  const run = async (text: string) => {
     if (!text.trim() || thinking) return
     setThinking(true)
 
-    // Simulated streaming stages — replace with real token/stream events.
+    // Staged shimmer while the model shapes the spec.
     const stages = ["Reading your request…", "Inferring GPU tier & resources…", "Drafting a validated job spec…"]
     let i = 0
     setStage(stages[0])
@@ -39,13 +39,24 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
       if (i < stages.length) setStage(stages[i])
     }, 520)
 
-    setTimeout(() => {
-      clearInterval(tick)
-      const spec = parseJobFromPrompt(text)
+    try {
+      // Claude Opus 4.8 structured output, Zod-re-validated server-side; falls
+      // back to the keyword parser when no API key is configured.
+      const res = await fetch("/api/jobs/parse", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: text }),
+      })
+      const data = await res.json()
+      const spec: JobFormState = data?.ok ? data.spec : parseJobFromPrompt(text)
       onParsed(spec)
+    } catch {
+      onParsed(parseJobFromPrompt(text))
+    } finally {
+      clearInterval(tick)
       setThinking(false)
       setStage("")
-    }, 1700)
+    }
   }
 
   return (

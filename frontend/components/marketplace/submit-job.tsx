@@ -62,10 +62,31 @@ function validate(f: JobFormState) {
 export function SubmitJob() {
   const [form, setForm] = useState<JobFormState>({ ...EMPTY_JOB, name: "" })
   const [autofilled, setAutofilled] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState<{ jobId?: string; error?: string } | null>(null)
 
   const set = <K extends keyof JobFormState>(key: K, value: JobFormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
+
+  const submit = async () => {
+    setSubmitting(true)
+    setResult(null)
+    try {
+      // POST to the real coordinator: inserts job + tiles + escrow debit (PLAN.md §3).
+      const res = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (data.ok) setResult({ jobId: data.jobId })
+      else setResult({ error: data.error === "INSUFFICIENT_FUNDS" ? "Insufficient MYC balance for this bid." : data.error })
+    } catch {
+      setResult({ error: "Network error — could not reach the coordinator." })
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   // when a GPU tier is picked, suggest its baseline VRAM/RAM
   const onTier = (tier: GpuTier) => {
@@ -90,7 +111,7 @@ export function SubmitJob() {
         onParsed={(spec) => {
           setForm(spec)
           setAutofilled(true)
-          setSubmitted(false)
+          setResult(null)
         }}
       />
 
@@ -274,23 +295,25 @@ export function SubmitJob() {
       {/* ---- submit ---- */}
       <button
         type="button"
-        disabled={!valid}
-        onClick={() => setSubmitted(true)}
+        disabled={!valid || submitting}
+        onClick={submit}
         className={cn(
           "group flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all",
-          valid
+          valid && !submitting
             ? "bg-primary text-primary-foreground glow-teal hover:brightness-110"
             : "cursor-not-allowed bg-secondary text-tertiary",
         )}
       >
         <Send className="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
-        {submitted ? "Job submitted to the mesh" : `Submit job · ${form.rewardBid.toLocaleString()} MYC`}
+        {submitting ? "Submitting…" : result?.jobId ? "Job submitted to the mesh" : `Submit job · ${form.rewardBid.toLocaleString()} MYC`}
       </button>
-      {submitted && (
+      {result?.jobId && (
         <p className="text-center font-mono text-[11px] text-primary [animation:fade-in-up_0.4s_ease-out]">
-          {/* POST /api/jobs — broadcasts the spec to the scheduler for matching. */}
-          Spec broadcast to the scheduler. Cultivator nodes are being matched…
+          Escrow funded · job <span className="text-foreground">{result.jobId.slice(0, 8)}</span> fanned out to the mesh. Watch it render on the Network page.
         </p>
+      )}
+      {result?.error && (
+        <p className="text-center font-mono text-[11px] text-destructive [animation:fade-in-up_0.4s_ease-out]">{result.error}</p>
       )}
     </section>
   )
