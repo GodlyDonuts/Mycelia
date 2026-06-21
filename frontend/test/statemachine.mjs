@@ -35,10 +35,13 @@ function tileBytes(p, i) {
 // Claim any pending tile for our node, retrying — the driver keeps a constant
 // flow of pending work, and a tile we claim is held exclusively.
 async function claimOne(node) {
-  for (let i = 0; i < 40; i++) {
+  // The driver keeps the active render job stocked with pending tiles, so we can
+  // usually claim without submitting. Only top up occasionally, and stay well
+  // under the 20/min submit rate limit so this composes with other suites.
+  for (let i = 0; i < 24; i++) {
     const t = (await post("/api/pull-work", { nodeId: node, nodeName: "sm-test-node" })).body?.tile
     if (t) return t
-    await post("/api/submit", { name: "sm feed", type: "render", gpuTier: "none", vram: 0, ram: 4, maxRuntimeMin: 30, replication: 1, rewardBid: 100 })
+    if (i % 8 === 0) await post("/api/submit", { name: "sm feed", type: "render", gpuTier: "none", vram: 0, ram: 4, maxRuntimeMin: 30, replication: 1, rewardBid: 100 })
   }
   return null
 }
@@ -78,6 +81,21 @@ async function main() {
     const cheat2 = await post("/api/submit-result", { tileId: p2.tileId, nodeId: node, nodeName: "sm-test-node", resultB64: bad.toString("base64"), gpuMs: 5 })
     ok("repeat cheat does not re-slash (guarded claim transition)", cheat2.body?.verified === false, JSON.stringify(cheat2.body))
   } else ok("cheat-test tile available", false, "no tile to claim")
+
+  // E. Sybil defense — a repeat cheater is banned and forfeits all stake, then
+  // can never claim work again (#141). Fresh throwaway node, cheats past threshold.
+  const sybil = crypto.randomUUID()
+  await post("/api/nodes/register", { id: sybil, name: "sybil", kind: "browser", region: "browser" })
+  let bannedSeen = false
+  for (let i = 0; i < 8 && !bannedSeen; i++) {
+    const t = await claimOne(sybil)
+    if (!t) { bannedSeen = true; break } // ban makes claims return null
+    const bad = tileBytes(t.params, t.tileIndex); for (let k = 0; k < bad.length; k++) bad[k] = (bad[k] + 97) & 255
+    await post("/api/submit-result", { tileId: t.tileId, nodeId: sybil, nodeName: "sybil", resultB64: bad.toString("base64"), gpuMs: 5 })
+  }
+  // after the ban, a banned node's claims always return null
+  const afterBan = await claimOne(sybil)
+  ok("repeat cheater is banned and can no longer claim work", afterBan === null, `afterBan=${afterBan?.tileId}`)
 
   console.log(`\n${pass} passed, ${fail} failed`)
   process.exit(fail ? 1 : 0)

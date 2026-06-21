@@ -19,6 +19,10 @@ import {
 import { JobSpecSchema, type JobSpec, tierToCapabilityClass } from "./jobspec"
 import { MAX_RESULT_B64 } from "./policy"
 
+// Sybil defense (#141): a node banned after this many caught cheats forfeits all
+// remaining stake and can no longer claim work.
+const BAN_THRESHOLD = 5
+
 async function logEvent(kind: string, node: string | null, detail: string) {
   await query(`INSERT INTO net_events(kind,node_name,detail) VALUES ($1,$2,$3)`, [kind, node, detail])
 }
@@ -102,6 +106,10 @@ export interface ClaimedTile {
  * mandatory 40001 retry (handled by withTx's wrapper).
  */
 export async function pullWork(node: { id: string; name: string }, jobId?: string): Promise<ClaimedTile | null> {
+  // Sybil defense (#141): a banned node can never claim work again.
+  const banned = await queryOne<{ id: string }>(`SELECT id FROM nodes WHERE id=$1 AND status='banned'`, [node.id])
+  if (banned) return null
+
   const claimed = await queryOne<{
     id: string
     job_id: string
@@ -186,14 +194,14 @@ export async function submitResult(input: {
          WHERE id=$1 AND assigned_node_id=$2 AND status='claimed' RETURNING id`,
         [input.tileId, input.nodeId],
       )
-      if (!claimed) return 0
+      if (!claimed) return { amt: 0, banned: false, forfeited: 0 }
       const n = await tx.queryOne<{ user_id: string; stake_myc: string }>(
         `SELECT user_id, stake_myc FROM nodes WHERE id=$1`, [input.nodeId])
       const amt = Math.min(num(n?.stake_myc), Math.max(2, perTile * 4))
-      await tx.query(
+      const after = await tx.queryOne<{ challenges_failed: number; stake_myc: string }>(
         `UPDATE nodes SET stake_myc = GREATEST(0, stake_myc - $2), reputation = GREATEST(0, reputation - 8),
            reliability_score = GREATEST(0, reliability_score - 0.1), spot_checks = spot_checks + 1, challenges_failed = challenges_failed + 1
-         WHERE id=$1`,
+         WHERE id=$1 RETURNING challenges_failed, stake_myc`,
         [input.nodeId, amt],
       )
       if (amt > 0) {
@@ -204,9 +212,28 @@ export async function submitResult(input: {
         )
       }
       await tx.query(`INSERT INTO reputation_events(node_id,kind,delta) VALUES ($1,'fail',-8)`, [input.nodeId])
-      return amt
+
+      // Sybil defense (PLAN §8, #141): repeat offenders are BANNED and forfeit
+      // ALL remaining stake. A cheap throwaway identity that gets caught loses its
+      // whole stake-at-risk — combined with the stake-weighted spot-check rate,
+      // minting fresh Sybils is strictly negative-EV.
+      let banned = false
+      const remaining = num(after?.stake_myc)
+      if (after && after.challenges_failed >= BAN_THRESHOLD) {
+        banned = true
+        await tx.query(`UPDATE nodes SET status='banned', stake_myc=0 WHERE id=$1`, [input.nodeId])
+        if (remaining > 0) {
+          await tx.query(
+            `INSERT INTO ledger_entries(account_id,job_id,tile_id,amount_myc,entry_type,idempotency_key)
+             VALUES ($1,$2,$3,$4,'slash',$5)`,
+            [n?.user_id ?? input.nodeId, tile.job_id, input.tileId, -remaining, `forfeit-${input.nodeId}-${Date.now()}`],
+          )
+        }
+      }
+      return { amt, banned, forfeited: banned ? remaining : 0 }
     })
-    if (slashAmt > 0) await logEvent("slash", input.nodeName, `cheat caught · tile ${tile.tile_index} · −${Math.round(slashAmt)} MYC slashed`)
+    if (slashAmt.amt > 0) await logEvent("slash", input.nodeName, `cheat caught · tile ${tile.tile_index} · −${Math.round(slashAmt.amt)} MYC slashed`)
+    if (slashAmt.banned) await logEvent("slash", input.nodeName, `BANNED · repeat cheating · ${Math.round(slashAmt.forfeited)} MYC stake forfeited`)
     return { ok: false, verified: false, diffPct: check.diffPct, reward: 0, jobDone: false }
   }
 

@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS nodes (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id          UUID,
   display_name     TEXT NOT NULL,
-  status           TEXT NOT NULL DEFAULT 'online' CHECK (status IN ('online','idle','offline')),
+  status           TEXT NOT NULL DEFAULT 'online' CHECK (status IN ('online','idle','offline','banned')),
   kind             TEXT NOT NULL DEFAULT 'desktop' CHECK (kind IN ('browser','laptop','desktop','gpu','phone')),
   capability_class TEXT,
   cpu_class        TEXT,
