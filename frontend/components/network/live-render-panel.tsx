@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { Download } from "lucide-react"
 import { base64ToBytes } from "@/lib/fractal"
 import { tileImageData } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -111,7 +112,24 @@ export function LiveRenderPanel() {
           <h2 className="text-sm font-medium text-foreground">Live Render</h2>
           <p className="truncate font-mono text-[11px] text-tertiary">{render?.name ?? "fractal-deepzoom"} · tiled</p>
         </div>
-        <span className="font-mono text-[11px] tabular-nums text-primary">{pct}%</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const c = canvasRef.current
+              if (!c) return
+              const a = document.createElement("a")
+              a.href = c.toDataURL("image/png")
+              a.download = `mycelia-render-${(render?.jobId ?? "image").slice(0, 8)}.png`
+              a.click()
+            }}
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            title="Download the reassembled image as PNG"
+          >
+            <Download className="size-3.5" /> png
+          </button>
+          <span className="font-mono text-[11px] tabular-nums text-primary">{pct}%</span>
+        </div>
       </div>
 
       {/* canvas reassembled from real computed tile pixels, with a live scaffold overlay */}

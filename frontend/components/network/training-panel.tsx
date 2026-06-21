@@ -1,7 +1,7 @@
 "use client"
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { ShieldX } from "lucide-react"
+import { ShieldX, Download } from "lucide-react"
 import { usePoll } from "@/lib/api"
 
 interface TrainingData {
@@ -47,6 +47,15 @@ export function TrainingPanel() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {data && (
+            <a
+              href={`/api/training/adapter?jobId=${data.jobId}`}
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+              title="Download the trained LoRA adapter"
+            >
+              <Download className="size-3.5" /> adapter
+            </a>
+          )}
           {data && data.rejectedDeltas > 0 && (
             <span className="inline-flex items-center gap-1 rounded-md bg-status-offline/10 px-2 py-1 font-mono text-[11px] text-status-offline" title="bad deltas rejected by the canary-loss check">
               <ShieldX className="size-3.5" /> {data.rejectedDeltas} Δ rejected
