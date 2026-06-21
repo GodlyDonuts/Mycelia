@@ -1,21 +1,17 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { NODES } from "@/lib/dashboard-data"
-import { useNodeTelemetry } from "@/hooks/use-node-telemetry"
+import { NODES, type NodeData } from "@/lib/dashboard-data"
+import { usePoll } from "@/lib/api"
 import { NodeCard, NodeCardSkeleton, AddDeviceCard } from "./node-card"
 
-export function NodeGrid() {
-  // Simulated initial fetch -> shows skeletons. Replace with real load state
-  // (SWR `isLoading`) once the node roster endpoint is wired in.
-  const [loading, setLoading] = useState(true)
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 1100)
-    return () => clearTimeout(t)
-  }, [])
+type DashboardPayload = { nodes: NodeData[] }
 
-  // live gauges stream in here once loaded
-  const nodes = useNodeTelemetry(NODES)
+export function NodeGrid() {
+  // Live node roster + gauges from the read API. While the first frame is
+  // loading (`data === null`), show skeletons; fall back to mock NODES on error.
+  const { data, error } = usePoll<DashboardPayload>("/api/dashboard", 2000)
+  const loading = data === null && error === null
+  const nodes = data?.nodes ?? NODES
 
   return (
     <section aria-label="Your devices">

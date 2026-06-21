@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { MyceliumBackground } from "@/components/mycelium-background"
 import { ArrowRight } from "lucide-react"
@@ -27,6 +28,7 @@ export function Hero() {
           <Button
             size="lg"
             className="group h-11 w-full gap-2 bg-primary px-6 font-medium text-primary-foreground hover:bg-primary/90 sm:w-auto"
+            render={<Link href="/network" />}
           >
             Become a Cultivator
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
@@ -35,6 +37,7 @@ export function Hero() {
             size="lg"
             variant="ghost"
             className="h-11 w-full gap-2 px-5 text-foreground hover:bg-secondary sm:w-auto"
+            render={<Link href="/marketplace" />}
           >
             Submit a job
             <ArrowRight className="size-4 text-muted-foreground" />

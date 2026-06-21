@@ -3,6 +3,7 @@
 import { Area, AreaChart, ResponsiveContainer } from "recharts"
 import { TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { usePoll } from "@/lib/api"
 import type { StatCardData } from "@/lib/dashboard-data"
 
 function Sparkline({ data, positive }: { data: StatCardData["spark"]; positive: boolean }) {
@@ -73,12 +74,45 @@ export function StatCard({ stat }: { stat: StatCardData }) {
   )
 }
 
+type DashboardStats = {
+  totalEarnings: number
+  totalEarningsUsd: number
+  activeNodes: number
+  enrolledNodes: number
+}
+
+const fmt = (n: number) => Math.round(n).toLocaleString("en-US")
+
 export function StatCardRow({ stats }: { stats: StatCardData[] }) {
-  // NOTE: `stats` is static mock data today. Wire to the scheduler's aggregate
-  // metrics stream (WebSocket/SSE) so values + sparklines update in place.
+  // Live aggregate metrics from the read API. The "Total Earnings" and
+  // "Active Nodes" cards take real values; the others stay cosmetic. Sparklines
+  // + delta UI are preserved. Falls back to the passed mock `stats` until the
+  // first frame loads so SSR + first paint render unchanged.
+  const { data } = usePoll<DashboardStats>("/api/dashboard", 2000)
+
+  const live = data
+    ? stats.map((stat) => {
+        if (stat.id === "earnings") {
+          return {
+            ...stat,
+            value: `${fmt(data.totalEarnings)} MYC`,
+            sub: `≈ $${fmt(data.totalEarningsUsd)} USD`,
+          }
+        }
+        if (stat.id === "nodes") {
+          return {
+            ...stat,
+            value: `${data.activeNodes}`,
+            sub: `of ${data.enrolledNodes} enrolled`,
+          }
+        }
+        return stat
+      })
+    : stats
+
   return (
     <section aria-label="Account summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {stats.map((stat) => (
+      {live.map((stat) => (
         <StatCard key={stat.id} stat={stat} />
       ))}
     </section>
