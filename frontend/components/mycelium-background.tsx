@@ -25,6 +25,8 @@ export function MyceliumBackground({ className }: { className?: string }) {
     if (!canvas) return
     const ctx = canvas.getContext("2d")
     if (!ctx) return
+    const canvasEl = canvas
+    const context = ctx
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
@@ -39,15 +41,15 @@ export function MyceliumBackground({ className }: { className?: string }) {
     const THREAD = "236, 235, 228" // faint warm-white threads
 
     function build() {
-      const parent = canvas.parentElement
+      const parent = canvasEl.parentElement
       width = parent?.clientWidth ?? window.innerWidth
       height = parent?.clientHeight ?? window.innerHeight
       dpr = Math.min(window.devicePixelRatio || 1, 2)
-      canvas.width = width * dpr
-      canvas.height = height * dpr
-      canvas.style.width = `${width}px`
-      canvas.style.height = `${height}px`
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      canvasEl.width = width * dpr
+      canvasEl.height = height * dpr
+      canvasEl.style.width = `${width}px`
+      canvasEl.style.height = `${height}px`
+      context.setTransform(dpr, 0, 0, dpr, 0, 0)
 
       // sparse density — a quiet web, not a swarm
       const count = Math.min(Math.round((width * height) / 34000), 46)
@@ -64,7 +66,7 @@ export function MyceliumBackground({ className }: { className?: string }) {
     }
 
     function draw(t: number) {
-      ctx.clearRect(0, 0, width, height)
+      context.clearRect(0, 0, width, height)
 
       // threads
       for (let i = 0; i < nodes.length; i++) {
@@ -76,12 +78,12 @@ export function MyceliumBackground({ className }: { className?: string }) {
           const dist = Math.hypot(dx, dy)
           if (dist < LINK_DIST) {
             const alpha = (1 - dist / LINK_DIST) * 0.07
-            ctx.strokeStyle = `rgba(${THREAD}, ${alpha})`
-            ctx.lineWidth = 0.5
-            ctx.beginPath()
-            ctx.moveTo(a.x, a.y)
-            ctx.lineTo(b.x, b.y)
-            ctx.stroke()
+            context.strokeStyle = `rgba(${THREAD}, ${alpha})`
+            context.lineWidth = 0.5
+            context.beginPath()
+            context.moveTo(a.x, a.y)
+            context.lineTo(b.x, b.y)
+            context.stroke()
           }
         }
       }
@@ -90,13 +92,13 @@ export function MyceliumBackground({ className }: { className?: string }) {
       for (const n of nodes) {
         const pulse = 0.5 + 0.5 * Math.sin(t * 0.0009 + n.phase)
         if (n.lit) {
-          ctx.fillStyle = `rgba(${JADE}, ${0.35 + pulse * 0.4})`
+          context.fillStyle = `rgba(${JADE}, ${0.35 + pulse * 0.4})`
         } else {
-          ctx.fillStyle = `rgba(${THREAD}, ${0.1 + pulse * 0.12})`
+          context.fillStyle = `rgba(${THREAD}, ${0.1 + pulse * 0.12})`
         }
-        ctx.beginPath()
-        ctx.arc(n.x, n.y, n.r + (n.lit ? pulse * 0.5 : 0), 0, Math.PI * 2)
-        ctx.fill()
+        context.beginPath()
+        context.arc(n.x, n.y, n.r + (n.lit ? pulse * 0.5 : 0), 0, Math.PI * 2)
+        context.fill()
 
         if (!reduced) {
           n.x += n.vx

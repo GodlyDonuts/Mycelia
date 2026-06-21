@@ -285,7 +285,7 @@ export const EXAMPLE_PROMPTS: string[] = [
 /**
  * MOCK of the Claude structured-output endpoint.
  *
- * In production: POST { prompt } to /api/jobs/parse, which calls Claude with a
+ * In production: POST { prompt } to /jobs/parse, which calls Claude with a
  * JSON schema (generateObject) and returns a *validated* JobSpec. The model
  * maps plain English → typed fields, infers a sensible GPU tier, and proposes
  * a reward bid that respects any budget mentioned in the prompt.

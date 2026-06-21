@@ -4,6 +4,8 @@ import { useState, useRef } from "react"
 import { Sparkles, ArrowUp, Wand2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { EXAMPLE_PROMPTS, parseJobFromPrompt, type JobFormState } from "@/lib/marketplace-data"
+import { parseJob } from "@/lib/api-client"
+import type { ParseJobRequest } from "@/lib/api-contracts"
 
 /**
  * The magical centerpiece: a natural-language job intake.
@@ -11,7 +13,7 @@ import { EXAMPLE_PROMPTS, parseJobFromPrompt, type JobFormState } from "@/lib/ma
  * On submit we currently MOCK the round-trip. In production `onParsed` is fed
  * by a call to the Claude structured-output endpoint:
  *
- *   const res = await fetch("/api/jobs/parse", {
+   *   const res = await fetch("/jobs/parse", {
  *     method: "POST",
  *     body: JSON.stringify({ prompt }),
  *   })
@@ -24,11 +26,13 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
   const [prompt, setPrompt] = useState("")
   const [thinking, setThinking] = useState(false)
   const [stage, setStage] = useState<string>("")
+  const [backendStatus, setBackendStatus] = useState<string | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const run = (text: string) => {
+  const run = async (text: string) => {
     if (!text.trim() || thinking) return
     setThinking(true)
+    setBackendStatus(null)
 
     // Simulated streaming stages — replace with real token/stream events.
     const stages = ["Reading your request…", "Inferring GPU tier & resources…", "Drafting a validated job spec…"]
@@ -39,13 +43,26 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
       if (i < stages.length) setStage(stages[i])
     }, 520)
 
-    setTimeout(() => {
+    try {
+      const body: ParseJobRequest = { prompt: text }
+      const resultPromise = parseJob(body)
+      await new Promise((resolve) => setTimeout(resolve, 1700))
+      const result = await resultPromise
+
+      if (!result.response.ok) {
+        throw new Error(result.response.error)
+      }
+
+      setBackendStatus("/jobs/parse reached; using local mock spec until Claude is wired")
+    } catch {
+      setBackendStatus("Parse API unavailable; using local mock fallback")
+    } finally {
       clearInterval(tick)
       const spec = parseJobFromPrompt(text)
       onParsed(spec)
       setThinking(false)
       setStage("")
-    }, 1700)
+    }
   }
 
   return (
@@ -140,6 +157,12 @@ export function NlIntake({ onParsed }: { onParsed: (spec: JobFormState) => void 
               ))}
             </span>
           </div>
+        )}
+
+        {!thinking && backendStatus && (
+          <p className="mt-3 font-mono text-[10px] leading-relaxed text-tertiary [animation:fade-in-up_0.3s_ease-out]">
+            {backendStatus}
+          </p>
         )}
       </div>
     </div>
