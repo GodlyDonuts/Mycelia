@@ -35,6 +35,9 @@ CREATE TABLE IF NOT EXISTS nodes (
   capability       JSONB,
   reliability_score NUMERIC NOT NULL DEFAULT 1,
   reputation       NUMERIC NOT NULL DEFAULT 50,
+  stake_myc        NUMERIC NOT NULL DEFAULT 0,   -- stake-at-risk (PLAN §8): slashed on a failed challenge
+  spot_checks      INT NOT NULL DEFAULT 0,        -- challenges this node has faced
+  challenges_failed INT NOT NULL DEFAULT 0,       -- challenges it failed (cheats caught)
   is_simulated     BOOLEAN NOT NULL DEFAULT true,
   region           TEXT,
   last_heartbeat_at TIMESTAMPTZ,

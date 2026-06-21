@@ -159,19 +159,41 @@ export async function submitResult(input: {
     `SELECT reward_bid_myc, total_tiles, requester_id, name FROM jobs WHERE id=$1`, [tile.job_id])
   if (!job) return { ok: false, verified: false, diffPct: 1, reward: 0, jobDone: false }
 
+  const perTile = num(job.reward_bid_myc) / job.total_tiles
+  const { provider, fee } = splitReward(perTile)
+
   const bytes = base64ToBytes(input.resultB64)
   const check = verifyTile(tile.params, tile.tile_index, bytes)
 
   if (!check.ok) {
-    // reject: tile returns to the pool, contributor earns nothing (slashable on roadmap)
-    await query(`UPDATE tiles SET status='pending', assigned_node_id=NULL WHERE id=$1 AND status<>'verified'`, [input.tileId])
-    await query(`INSERT INTO reputation_events(node_id,kind,delta) VALUES ($1,'fail',-2)`, [input.nodeId])
-    await logEvent("tile-rejected", input.nodeName, `tile ${tile.tile_index} failed self-check`)
+    // Failed challenge → SLASH stake-at-risk (PLAN §8). Cheating is negative-EV:
+    // a wrong result forfeits a multiple of the tile's reward from the node's
+    // stake, drops its reputation (raising its future spot-check rate), and the
+    // tile returns to the pool for an honest node to recompute.
+    const slashAmt = await withTx(async (tx) => {
+      const n = await tx.queryOne<{ user_id: string; stake_myc: string }>(
+        `SELECT user_id, stake_myc FROM nodes WHERE id=$1`, [input.nodeId])
+      const amt = Math.min(num(n?.stake_myc), Math.max(2, perTile * 4))
+      await tx.query(`UPDATE tiles SET status='pending', assigned_node_id=NULL, assigned_node_name=NULL WHERE id=$1 AND status<>'verified'`, [input.tileId])
+      await tx.query(
+        `UPDATE nodes SET stake_myc = GREATEST(0, stake_myc - $2), reputation = GREATEST(0, reputation - 8),
+           reliability_score = GREATEST(0, reliability_score - 0.1), spot_checks = spot_checks + 1, challenges_failed = challenges_failed + 1
+         WHERE id=$1`,
+        [input.nodeId, amt],
+      )
+      if (amt > 0) {
+        await tx.query(
+          `INSERT INTO ledger_entries(account_id,job_id,tile_id,amount_myc,entry_type,idempotency_key)
+           VALUES ($1,$2,$3,$4,'slash',$5)`,
+          [n?.user_id ?? input.nodeId, tile.job_id, input.tileId, -amt, `slash-${input.tileId}-${input.nodeId}-${Date.now()}`],
+        )
+      }
+      await tx.query(`INSERT INTO reputation_events(node_id,kind,delta) VALUES ($1,'fail',-8)`, [input.nodeId])
+      return amt
+    })
+    await logEvent("slash", input.nodeName, `cheat caught · tile ${tile.tile_index} · −${Math.round(slashAmt)} MYC slashed`)
     return { ok: false, verified: false, diffPct: check.diffPct, reward: 0, jobDone: false }
   }
-
-  const perTile = num(job.reward_bid_myc) / job.total_tiles
-  const { provider, fee } = splitReward(perTile)
 
   const result = await withTx(async (tx) => {
     // idempotent: only the first verify of a not-yet-verified tile pays out
@@ -211,6 +233,12 @@ export async function submitResult(input: {
       [provider, input.nodeId],
     )
     await tx.query(`INSERT INTO reputation_events(node_id,kind,delta) VALUES ($1,'pass',1)`, [input.nodeId])
+    // passed challenge → reputation up (lowers future spot-check rate, raises sellable fraction)
+    await tx.query(
+      `UPDATE nodes SET reputation = LEAST(100, reputation + 0.4), reliability_score = LEAST(1, reliability_score + 0.01),
+         spot_checks = spot_checks + 1 WHERE id=$1`,
+      [input.nodeId],
+    )
 
     const upd = await tx.queryOne<{ completed_tiles: number; total_tiles: number }>(
       `UPDATE jobs SET completed_tiles = completed_tiles + 1 WHERE id=$1 RETURNING completed_tiles, total_tiles`,

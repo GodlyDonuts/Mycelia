@@ -22,6 +22,12 @@ declare global {
 const TICK_MS = 1300
 const TILES_PER_TICK = 5
 
+/** Deterministically tag ~9% of nodes as malicious (by id) so the trust layer has cheats to catch. */
+function isMalicious(id: string): boolean {
+  const hex = id.replace(/[^0-9a-f]/gi, "").slice(-6)
+  return hex.length > 0 && parseInt(hex, 16) % 11 === 0
+}
+
 // Interesting Mandelbrot neighbourhoods the driver zooms into for variety.
 const SPOTS: Array<Pick<JobRenderParams, "cx" | "cy" | "scale" | "maxIter">> = [
   { cx: -0.743643887037151, cy: 0.13182590420533, scale: 0.0008, maxIter: 360 },
@@ -100,7 +106,14 @@ async function tick() {
   for (const n of nodes) {
     const claim = await pullWork({ id: n.id, name: n.display_name }, jobId)
     if (!claim) continue
-    const bytes = computeTile(claim.params, claim.tileIndex)
+    let bytes = computeTile(claim.params, claim.tileIndex)
+    // A small fraction of nodes are malicious: they sometimes submit a corrupted
+    // result. The deterministic self-check catches it, the node is slashed, the
+    // tile returns to the pool for an honest node — exercising the trust layer.
+    if (isMalicious(n.id) && Math.random() < 0.5) {
+      bytes = bytes.slice()
+      for (let i = 0; i < bytes.length; i++) bytes[i] = (bytes[i] + 97) & 255
+    }
     const b64 = bytesToBase64(bytes)
     const gpuMs = 80 + Math.floor(Math.random() * 320)
     await submitResult({ tileId: claim.tileId, nodeId: n.id, nodeName: n.display_name, resultB64: b64, gpuMs })

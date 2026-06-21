@@ -6,6 +6,7 @@ import {
   Store,
   Network,
   Wallet,
+  ShieldCheck,
   Settings,
   Menu,
   X,
@@ -22,6 +23,7 @@ const NAV: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Marketplace", icon: Store, href: "/marketplace" },
   { label: "Network", icon: Network, href: "/network" },
+  { label: "Trust", icon: ShieldCheck, href: "/verification" },
   { label: "Earnings", icon: Wallet, href: "/ledger" },
 ]
 

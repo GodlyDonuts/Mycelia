@@ -128,6 +128,10 @@ export async function seed(pg: PGlite): Promise<void> {
     )
   }
 
+  // ---- stake-at-risk per node (PLAN §8) ----
+  await pg.query(`UPDATE nodes SET stake_myc = 120 + floor(random()*480) WHERE is_simulated=true`)
+  await pg.query(`UPDATE nodes SET stake_myc = 300 WHERE is_simulated=false`)
+
   // ---- market snapshot ----
   await pg.query(
     `INSERT INTO market_snapshots(total_tflops,gpus_online,nodes_online,jobs_running,jobs_queued,jobs_per_sec,supply_units,demand_units,clearing_price_myc)
