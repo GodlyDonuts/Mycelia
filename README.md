@@ -18,7 +18,13 @@ This repo contains a **working end-to-end MVP** of the read path, the coordinato
 - **Verification moat (trust & economics)** — stake-at-risk + reputation + **slashing**: a failed challenge slashes a node's stake and drops its reputation (raising its spot-check rate). Reputation drives the **sellable fraction** — and the Trust screen shows the live unit-economics (proven+cheap-power **+$0.084/node-hour**, unproven+high-power break-even) computed against the current mesh (PLAN §7–8).
 - **Observability** — a ledger **reconciliation sweep** (no overdraft; escrow always covers payouts) and an on-stage **health strip** (tiles by status, mesh liveness, trust counters, per-worker heartbeat).
 - **Hardening** — Zod validation on every write endpoint + token-bucket rate limiting on public endpoints. **Tests:** 19 Vitest unit tests + a 19-check live integration smoke, run in **CI** (GitHub Actions).
-- **Seven live screens** — Provider Dashboard, Compute Marketplace + Submit, Live Network Telemetry (the hero), Trust & Economics, Settlement/Earnings Ledger, On-stage Health, and the Landing page.
+- **Native supply-engine daemon** — a real off-browser OS process ([`daemon/`](daemon)) that harvests idle multicore CPU (worker threads), with idle-only scheduling + a power-cap duty cycle. Same pull/submit protocol as every node.
+- **Refereed-delegation recompute** — the Phase-5 moat: a referee binary-searches a disputed tile to the first divergent row and recomputes only that row → **O(log n) verification** (64× speedup), live on the Trust screen.
+- **Multiple workload classes** — a per-class verification registry; a second live verifiable workload (**Monte Carlo π**, deterministic → reseed-verified) alongside the fractal render and LoRA training.
+- **Auth + roles** — local HMAC-signed sessions with provider/requester roles; submit is role-gated server-side.
+- **Host protection** — untrusted kernels run in a capability-denied sandbox (no fs/net/process) with a hard time cap (the Wasmtime/WASI design's buildable slice).
+- **MYC redemption** — internal-credit cash-out (bank/gift-card/crypto) with tax/KYC disclosure, balance-gated through the ledger.
+- **Seven app screens** (Dashboard, Marketplace, Network, Trust & Economics, Earnings, Health, Landing) + a sign-in flow.
 
 ## The database: built real, AWS deferred
 
