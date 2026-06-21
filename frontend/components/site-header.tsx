@@ -1,7 +1,9 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { buttonVariants } from "@/components/ui/button"
 import { Wordmark } from "@/components/mycelium-mark"
+import { cn } from "@/lib/utils"
 
 const NAV = [
   { label: "How it works", href: "#how-it-works" },
@@ -29,15 +31,18 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            className="hidden text-muted-foreground hover:text-foreground sm:inline-flex"
+          <Link
+            href="/signin"
+            className={cn(buttonVariants({ variant: "ghost" }), "hidden text-muted-foreground hover:text-foreground sm:inline-flex")}
           >
             Sign in
-          </Button>
-          <Button className="bg-primary font-medium text-primary-foreground hover:bg-primary/90">
+          </Link>
+          <Link
+            href="/signin"
+            className={cn(buttonVariants(), "bg-primary font-medium text-primary-foreground hover:bg-primary/90")}
+          >
             Become a Cultivator
-          </Button>
+          </Link>
         </div>
       </div>
     </header>

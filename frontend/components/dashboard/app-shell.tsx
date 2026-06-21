@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils"
 import { usePoll } from "@/lib/api"
 import { MyceliumMark } from "@/components/mycelium-mark"
+import { UserMenu } from "@/components/auth/user-menu"
 
 type NavItem = { label: string; icon: typeof LayoutDashboard; href: string }
 
@@ -177,12 +178,7 @@ export function AppShell({
               <Bell className="size-4.5" strokeWidth={1.75} />
               <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
             </button>
-            <span
-              className="flex size-9 items-center justify-center rounded-full bg-secondary font-mono text-xs font-semibold text-foreground"
-              aria-hidden="true"
-            >
-              CK
-            </span>
+            <UserMenu />
           </div>
         </header>
 

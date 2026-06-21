@@ -80,7 +80,15 @@ export function SubmitJob() {
       })
       const data = await res.json()
       if (data.ok) setResult({ jobId: data.jobId })
-      else setResult({ error: data.error === "INSUFFICIENT_FUNDS" ? "Insufficient MYC balance for this bid." : data.error })
+      else
+        setResult({
+          error:
+            data.error === "INSUFFICIENT_FUNDS"
+              ? "Insufficient MYC balance for this bid."
+              : data.error === "PROVIDER_CANNOT_SUBMIT"
+                ? "You're signed in as a Provider — switch to a Requester account to submit jobs."
+                : data.error,
+        })
     } catch {
       setResult({ error: "Network error — could not reach the coordinator." })
     } finally {
