@@ -32,7 +32,7 @@ pnpm install
 pnpm dev              # http://localhost:3000
 ```
 
-Open the **Network** page and click **Join the mesh** to contribute compute from your browser; submit a job from the **Marketplace** (try the plain-English box) and watch it render.
+Open the **Network** page and click **Join the mesh** to contribute compute from your browser; submit a job from the **Marketplace** (try the plain-English box) and watch it render. For a full click-by-click demo script, see [`docs/DEMO.md`](docs/DEMO.md).
 
 Optional — enable real Claude NL submission:
 
