@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- macOS launchd agent for the Mycelia daemon. Installed to
+     ~/Library/LaunchAgents/ by install.sh (which fills in the @PLACEHOLDERS@).
+     Runs at login, restarts on crash, and logs to ~/Library/Logs. -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.mycelia.daemon</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>@NODE@</string>
+    <string>@DAEMON@</string>
+    <string>--idle</string>
+    <string>--power</string>
+    <string>0.85</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>MYCELIA_URL</key>
+    <string>@URL@</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>LowPriorityIO</key>
+  <true/>
+  <key>Nice</key>
+  <integer>10</integer>
+  <key>StandardOutPath</key>
+  <string>@HOME@/Library/Logs/mycelia-daemon.log</string>
+  <key>StandardErrorPath</key>
+  <string>@HOME@/Library/Logs/mycelia-daemon.err.log</string>
+</dict>
+</plist>

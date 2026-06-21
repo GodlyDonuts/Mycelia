@@ -1,0 +1,25 @@
+# systemd user service for the Mycelia daemon (Linux). Installed to
+# ~/.config/systemd/user/ by install.sh (which fills in the @PLACEHOLDERS@).
+# Runs as a low-priority background harvester, restarts on failure.
+#
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now mycelia-daemon
+#   journalctl --user -u mycelia-daemon -f      # logs
+[Unit]
+Description=Mycelia idle-compute daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=MYCELIA_URL=@URL@
+ExecStart=@NODE@ @DAEMON@ --idle --power 0.85
+Restart=on-failure
+RestartSec=5
+# Be a polite guest: low CPU/IO priority so foreground work always wins.
+Nice=10
+IOSchedulingClass=idle
+CPUWeight=20
+
+[Install]
+WantedBy=default.target

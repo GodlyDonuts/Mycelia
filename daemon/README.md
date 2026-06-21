@@ -29,6 +29,23 @@ MYCELIA_URL=http://localhost:3000 node daemon/mycelia-daemon.mjs --gpu
 
 `Ctrl-C` leaves the mesh cleanly and prints a contribution summary.
 
+## Run as a background service (#69)
+
+To harvest idle compute 24/7 the daemon should run as an OS service — starting at
+login, restarting on crash, at low CPU/IO priority. `service/install.sh` does this
+for you (macOS → launchd user agent, Linux → systemd user service):
+
+```bash
+daemon/service/install.sh                         # install + start (URL=localhost:3000)
+daemon/service/install.sh https://my.coordinator  # point at a remote coordinator
+daemon/service/install.sh --uninstall             # stop + remove
+```
+
+Logs: macOS `~/Library/Logs/mycelia-daemon.log`; Linux `journalctl --user -u mycelia-daemon -f`.
+The service files (`com.mycelia.daemon.plist`, `mycelia-daemon.service`) set
+`Nice=10` + idle IO so foreground work always wins. Windows (SCM via `sc.exe` or
+`nssm`) is the remaining target.
+
 ## Production target
 
 The plan's production supply engine is a **native Rust daemon** (Tauri/raw-Rust
