@@ -54,20 +54,71 @@ export interface NetworkData {
 let netCache: NetworkData | null = null
 const netSubs = new Set<(d: NetworkData) => void>()
 let netTimer: ReturnType<typeof setInterval> | null = null
+let netES: EventSource | null = null
 
-function startNet() {
+function broadcast(d: NetworkData) {
+  netCache = d
+  netSubs.forEach((fn) => fn(d))
+}
+
+function startPolling() {
   if (netTimer) return
   const run = async () => {
     try {
-      const d = await getJSON<NetworkData>("/api/network")
-      netCache = d
-      netSubs.forEach((fn) => fn(d))
+      broadcast(await getJSON<NetworkData>("/api/network"))
     } catch {
       /* keep last good frame */
     }
   }
   run()
   netTimer = setInterval(run, 2000)
+}
+
+// Prefer the SSE live beat (PLAN §3); fall back to polling if EventSource is
+// unavailable or the stream errors.
+function startNet() {
+  if (netES || netTimer) return
+  if (typeof EventSource !== "undefined") {
+    try {
+      const es = new EventSource("/api/network/stream")
+      netES = es
+      es.onmessage = (e) => {
+        try {
+          broadcast(JSON.parse(e.data) as NetworkData)
+        } catch {
+          /* ignore malformed frame */
+        }
+      }
+      es.onerror = () => {
+        try {
+          es.close()
+        } catch {
+          /* noop */
+        }
+        if (netES === es) netES = null
+        startPolling() // graceful degradation
+      }
+      return
+    } catch {
+      /* fall through to polling */
+    }
+  }
+  startPolling()
+}
+
+function stopNet() {
+  if (netES) {
+    try {
+      netES.close()
+    } catch {
+      /* noop */
+    }
+    netES = null
+  }
+  if (netTimer) {
+    clearInterval(netTimer)
+    netTimer = null
+  }
 }
 
 export function useNetwork(): NetworkData | null {
@@ -78,10 +129,7 @@ export function useNetwork(): NetworkData | null {
     if (netCache) setData(netCache)
     return () => {
       netSubs.delete(setData)
-      if (netSubs.size === 0 && netTimer) {
-        clearInterval(netTimer)
-        netTimer = null
-      }
+      if (netSubs.size === 0) stopNet()
     }
   }, [])
   return data
