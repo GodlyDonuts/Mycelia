@@ -8,9 +8,19 @@ import { NextResponse } from "next/server"
 
 type Bucket = { count: number; resetAt: number }
 const buckets = new Map<string, Bucket>()
+let lastSweep = 0
+
+// Drop expired buckets periodically so spoofed/rotating client keys can't grow
+// the map unboundedly (a single-instance demo guard; a shared store on scale-out).
+function sweep(now: number) {
+  if (now - lastSweep < 60_000) return
+  lastSweep = now
+  for (const [k, b] of buckets) if (now > b.resetAt) buckets.delete(k)
+}
 
 export function rateLimit(key: string, limit: number, windowMs: number): { ok: boolean; retryAfter: number } {
   const now = Date.now()
+  sweep(now)
   const b = buckets.get(key)
   if (!b || now > b.resetAt) {
     buckets.set(key, { count: 1, resetAt: now + windowMs })

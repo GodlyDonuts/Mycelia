@@ -171,10 +171,18 @@ export async function submitResult(input: {
     // stake, drops its reputation (raising its future spot-check rate), and the
     // tile returns to the pool for an honest node to recompute.
     const slashAmt = await withTx(async (tx) => {
+      // Gate the slash on a guarded claim transition: only the node that still
+      // holds this exact claim can be slashed for it. Replays, results for a
+      // reclaimed tile, or non-owners match no row → no double-slash, no abuse.
+      const claimed = await tx.queryOne<{ id: string }>(
+        `UPDATE tiles SET status='pending', assigned_node_id=NULL, assigned_node_name=NULL
+         WHERE id=$1 AND assigned_node_id=$2 AND status='claimed' RETURNING id`,
+        [input.tileId, input.nodeId],
+      )
+      if (!claimed) return 0
       const n = await tx.queryOne<{ user_id: string; stake_myc: string }>(
         `SELECT user_id, stake_myc FROM nodes WHERE id=$1`, [input.nodeId])
       const amt = Math.min(num(n?.stake_myc), Math.max(2, perTile * 4))
-      await tx.query(`UPDATE tiles SET status='pending', assigned_node_id=NULL, assigned_node_name=NULL WHERE id=$1 AND status<>'verified'`, [input.tileId])
       await tx.query(
         `UPDATE nodes SET stake_myc = GREATEST(0, stake_myc - $2), reputation = GREATEST(0, reputation - 8),
            reliability_score = GREATEST(0, reliability_score - 0.1), spot_checks = spot_checks + 1, challenges_failed = challenges_failed + 1
@@ -191,7 +199,7 @@ export async function submitResult(input: {
       await tx.query(`INSERT INTO reputation_events(node_id,kind,delta) VALUES ($1,'fail',-8)`, [input.nodeId])
       return amt
     })
-    await logEvent("slash", input.nodeName, `cheat caught · tile ${tile.tile_index} · −${Math.round(slashAmt)} MYC slashed`)
+    if (slashAmt > 0) await logEvent("slash", input.nodeName, `cheat caught · tile ${tile.tile_index} · −${Math.round(slashAmt)} MYC slashed`)
     return { ok: false, verified: false, diffPct: check.diffPct, reward: 0, jobDone: false }
   }
 
@@ -225,7 +233,7 @@ export async function submitResult(input: {
       [PLATFORM_ACCOUNT, tile.job_id, input.tileId, fee, `fee-${input.tileId}`],
     )
     await tx.query(
-      `UPDATE account_balance SET reserved_myc = reserved_myc - $1, updated_at=now() WHERE account_id=$2`,
+      `UPDATE account_balance SET reserved_myc = GREATEST(0, reserved_myc - $1), updated_at=now() WHERE account_id=$2`,
       [perTile, job.requester_id],
     )
     await tx.query(

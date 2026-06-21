@@ -180,30 +180,44 @@ export async function submitContribution(input: {
   const global = fromRef(round.adapter_ref_in)
   const check = verifyContribution(global, input.localTheta, canaryBatch())
 
-  const owner = await queryOne<{ user_id: string }>(`SELECT user_id FROM nodes WHERE id=$1`, [input.nodeId])
-  const ownerId = owner?.user_id ?? input.nodeId
+  // Record the contribution + cell + counter atomically, re-checking the round
+  // is still dispatched (so we never tell a node "accepted" after the round has
+  // been claimed for aggregation). aggregateRound runs OUTSIDE this tx to avoid
+  // the single-connection deadlock.
+  const res = await withTx(async (tx) => {
+    const still = await tx.queryOne<{ status: string }>(`SELECT status FROM training_rounds WHERE id=$1`, [input.roundId])
+    if (!still || still.status !== "dispatched") return { state: "closed" as const }
 
-  await query(
-    `INSERT INTO contributions(round_id,job_id,node_id,node_name,delta_ref,tokens_processed,local_steps,canary_loss_delta,accepted,vote_status)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-    [input.roundId, input.jobId, input.nodeId, input.nodeName, check.accepted ? toRef(input.localTheta) : null,
-     input.tokens, input.localSteps, check.canaryLossDelta, check.accepted, check.accepted ? "accepted" : "rejected"],
-  )
-  await query(`UPDATE cells SET status='submitted' WHERE id=$1`, [input.cellId])
+    await tx.query(
+      `INSERT INTO contributions(round_id,job_id,node_id,node_name,delta_ref,tokens_processed,local_steps,canary_loss_delta,accepted,vote_status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [input.roundId, input.jobId, input.nodeId, input.nodeName, check.accepted ? toRef(input.localTheta) : null,
+       input.tokens, input.localSteps, check.canaryLossDelta, check.accepted, check.accepted ? "accepted" : "rejected"],
+    )
+    await tx.query(`UPDATE cells SET status='submitted' WHERE id=$1`, [input.cellId])
+    if (!check.accepted) {
+      await tx.query(`INSERT INTO reputation_events(node_id,kind,delta) VALUES ($1,'fail',-2)`, [input.nodeId])
+      return { state: "rejected" as const }
+    }
+    const upd = await tx.queryOne<{ deltas_received: number; quorum_required: number }>(
+      `UPDATE training_rounds SET deltas_received = deltas_received + 1 WHERE id=$1 AND status='dispatched'
+       RETURNING deltas_received, quorum_required`,
+      [input.roundId],
+    )
+    return { state: "accepted" as const, upd }
+  })
 
-  if (!check.accepted) {
-    await query(`INSERT INTO reputation_events(node_id,kind,delta) VALUES ($1,'fail',-2)`, [input.nodeId])
+  if (res.state === "closed") {
+    return { ok: false, accepted: false, canaryLossDelta: check.canaryLossDelta, reason: "round closed", roundAggregated: false }
+  }
+  if (res.state === "rejected") {
     await logEvent("delta-rejected", input.nodeName, `Δ rejected · ${check.reason}`)
     return { ok: true, accepted: false, canaryLossDelta: check.canaryLossDelta, reason: check.reason, roundAggregated: false }
   }
 
   await logEvent("delta-accepted", input.nodeName, `Δ accepted · round ${round.round_index}`)
-  const upd = await queryOne<{ deltas_received: number; quorum_required: number }>(
-    `UPDATE training_rounds SET deltas_received = deltas_received + 1 WHERE id=$1 RETURNING deltas_received, quorum_required`,
-    [input.roundId],
-  )
   let roundAggregated = false
-  if (upd && upd.deltas_received >= upd.quorum_required) {
+  if (res.upd && res.upd.deltas_received >= res.upd.quorum_required) {
     roundAggregated = await aggregateRound(input.jobId, input.roundId)
   }
   return { ok: true, accepted: true, canaryLossDelta: check.canaryLossDelta, reason: check.reason, roundAggregated }
@@ -273,11 +287,25 @@ async function aggregateRound(jobId: string, roundId: string): Promise<boolean> 
 
     if (isLastRound || hitTarget) {
       await tx.query(`UPDATE training_jobs SET status='completed' WHERE id=$1`, [jobId])
-      // refund any unspent escrow
-      await tx.query(
-        `UPDATE account_balance SET available_myc = available_myc + reserved_myc, reserved_myc = 0, updated_at=now() WHERE account_id=$1`,
-        [job.requester_id],
+      // Refund only THIS job's unspent escrow (reward − what it actually paid out).
+      // reserved_myc is shared across all in-flight jobs, so it must never be zeroed.
+      const paidRow = await tx.queryOne<{ p: string }>(
+        `SELECT coalesce(sum(amount_myc),0)::float8 AS p FROM ledger_entries
+         WHERE job_id=$1 AND entry_type IN ('provider_earn','platform_fee')`,
+        [jobId],
       )
+      const unspent = Math.max(0, num(job.reward_bid_myc) - num(paidRow?.p))
+      if (unspent > 0) {
+        await tx.query(
+          `INSERT INTO ledger_entries(account_id,job_id,amount_myc,entry_type,idempotency_key)
+           VALUES ($1,$2,$3,'refund',$4)`,
+          [job.requester_id, jobId, unspent, `t-refund-${jobId}`],
+        )
+        await tx.query(
+          `UPDATE account_balance SET available_myc = available_myc + $1, reserved_myc = GREATEST(0, reserved_myc - $1), updated_at=now() WHERE account_id=$2`,
+          [unspent, job.requester_id],
+        )
+      }
     } else {
       await createRound(tx, jobId, roundIndex + 1, nextRef)
     }
