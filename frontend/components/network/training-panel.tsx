@@ -103,6 +103,18 @@ export function TrainingPanel() {
           ))}
         </div>
       </div>
+
+      <CommFooter />
     </div>
+  )
+}
+
+function CommFooter() {
+  const { data } = usePoll<{ method: string; adapters: Array<{ label: string; ratio: number }> }>("/api/training/comms", 30000)
+  const lora = data?.adapters?.find((a) => a.label.startsWith("LoRA"))
+  return (
+    <p className="mt-3 border-t border-border pt-2 font-mono text-[10px] text-tertiary">
+      comm: top-k + int8 + error-feedback{lora ? ` · adapter Δ ~${lora.ratio}× smaller over the WAN` : ""} (convergence preserved)
+    </p>
   )
 }
