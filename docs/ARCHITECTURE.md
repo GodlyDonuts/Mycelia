@@ -110,7 +110,20 @@ A second live workload class implementing the Regime-1 demo slice of [`ML_LAYER.
 - **Driver** ([`lib/training/driver.ts`](../frontend/lib/training/driver.ts)): simulates heterogeneous cells running real SGD, injecting one deliberately-bad delta per ~most rounds so the canary rejection is visible on stage.
 - **API:** `POST /api/training/submit` · `POST /api/training/pull` · `POST /api/training/submit-contribution` · `GET /api/training/active`. **UI:** the **Distributed Training** panel on the Network screen shows the live loss-drop curve, token-weighted contribution bars, and the "Δ rejected" count.
 
-## 11. What's live vs roadmap
+## 11. Verification moat & economics
 
-**Live:** coordinator, escrow-until-verified ledger, real fractal fan-out + reassembly, WebGPU/CPU browser worker, NL submission, read-only MCP, **distributed LoRA training (DiLoCo/FedAvg + canary verification)**, five screens.
-**Roadmap (the moat, unbuilt):** untrusted-result verification at scale (PoSP + refereed-delegation recompute, incl. refereed-recompute for training), WASM/Firecracker sandboxing, the native daemon supply engine, model-sharded training cells (pipeline/tensor parallel) + P2P, communication compression, SSE-on-Fluid transport, and the S3 blob pipeline. Tracked in GitHub issues under the phase milestones.
+The first cut of the differentiator (PLAN §7–8), kept honest as two separate claims (ledger = provably safe; verification = stake-weighted, negative-EV).
+- Nodes carry `stake_myc`, `reputation`, `spot_checks`, `challenges_failed`. A failed self-check **slashes** stake (`ledger 'slash'`), drops reputation, and returns the tile to the pool — cheating is negative-EV; a pass raises reputation. ([`lib/coordinator.ts`](../frontend/lib/coordinator.ts) `submitResult`.)
+- Reputation → spot-check rate → **effective replication** → **sellable fraction**, the dominant term in the unit economics. The **Trust & Economics** screen (`/verification`) shows the live sellable fraction, verification tax, stake at risk, cheats slashed, reputation leaderboard, and the §7 worked unit-economics computed against the current mesh. ([`lib/verification.ts`](../frontend/lib/verification.ts).)
+- The render driver injects ~9% malicious nodes so the trust layer has real cheats to catch.
+
+## 12. Observability & hardening
+
+- **Reconciliation sweep** ([`lib/health.ts`](../frontend/lib/health.ts)): no `account_balance` row may go negative; per-job payouts+refunds never exceed escrow held. Surfaced on the **Health** screen (`/health`) with render/training status, mesh liveness, trust counters, and per-worker heartbeat age. (This sweep caught a real sub-cent `splitReward` rounding drift.)
+- **Hardening:** every write endpoint validates its body with a Zod schema ([`lib/contracts.ts`](../frontend/lib/contracts.ts)) → clean 400s; public endpoints are rate-limited via a token bucket ([`lib/http.ts`](../frontend/lib/http.ts)).
+- **Tests:** 19 Vitest unit tests (`test/unit/`) + a 19-check live integration smoke (`test/smoke.mjs`), both in CI ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)).
+
+## 13. What's live vs roadmap
+
+**Live:** coordinator, escrow-until-verified ledger, real fractal fan-out + reassembly, WebGPU/CPU browser worker, NL submission, read-only MCP (7 tools), distributed LoRA training (DiLoCo/FedAvg + canary verification, external worker via `examples/train_worker.py`), the verification moat (stake/slash/reputation + live economics), observability (reconciliation + health), Zod + rate limiting, seven screens, CI.
+**Roadmap (the moat at scale, unbuilt):** PoSP + refereed-delegation recompute (incl. for training), WASM/Firecracker sandboxing, the native daemon supply engine, model-sharded training cells (pipeline/tensor parallel) + P2P, communication compression, SSE-on-Fluid transport, and the S3 blob pipeline. Tracked in GitHub issues under the phase milestones.

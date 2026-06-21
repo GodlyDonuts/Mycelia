@@ -37,6 +37,8 @@ Request flow: client (polling reads + POST) → route handlers in `app/api/*` �
 
 ## Status
 
-**Live:** coordinator (`/submit`,`/pull-work`,`/submit-result`,`/settle`), escrow-until-verified ledger, real fractal fan-out + reassembly, WebGPU/CPU browser worker, NL submission (Claude + fallback), read-only MCP (`/api/mcp`), **distributed LoRA training** (`lib/training/*`: DiLoCo/FedAvg outer loop + canary-loss verification + token-weighted payouts; `/api/training/*`; live loss-drop panel), five screens.
+**Live:** coordinator (`/submit`,`/pull-work`,`/submit-result`,`/settle`), escrow-until-verified ledger, real fractal fan-out + reassembly, WebGPU/CPU browser worker, NL submission (Claude + fallback), read-only MCP (`/api/mcp`, 7 tools), **distributed LoRA training** (`lib/training/*`: DiLoCo/FedAvg + canary verification + token-weighted payouts; `/api/training/*`; live loss-drop panel; external worker via `examples/train_worker.py`), **verification moat** (`lib/verification.ts`: stake/slash/reputation → sellable fraction + live unit economics; Trust screen), **observability** (`lib/health.ts`: reconciliation sweep + Health screen), Zod + rate limiting on write endpoints, seven screens.
 
-**Roadmap (unbuilt — the moat):** untrusted-result verification at scale (PoSP + refereed recompute, incl. for training), sandboxing, native daemon, model-sharded training cells + P2P, comm compression, SSE-on-Fluid, S3 blobs. Tracked as GitHub issues under phase milestones; implemented ones are closed with code pointers. See `docs/ML_LAYER.md` for the training design and `docs/ARCHITECTURE.md` §10 for what's built.
+**Tests:** `pnpm test` (19 Vitest unit) + `pnpm test:smoke` (19-check live integration, server running). Both in CI (`.github/workflows/ci.yml`).
+
+**Roadmap (unbuilt — the moat at scale):** PoSP + refereed-delegation recompute, sandboxing, native daemon, model-sharded training cells + P2P, comm compression, SSE-on-Fluid, S3 blobs. Tracked as GitHub issues under phase milestones; implemented ones are closed with code pointers. See `docs/ML_LAYER.md` for the training design and `docs/ARCHITECTURE.md` for what's built.
