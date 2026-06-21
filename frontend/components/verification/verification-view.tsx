@@ -1,8 +1,65 @@
 "use client"
 
-import { ShieldCheck, ShieldX, Gauge, Coins, TrendingUp, TrendingDown } from "lucide-react"
+import { ShieldCheck, ShieldX, Gauge, Coins, TrendingUp, TrendingDown, Crosshair } from "lucide-react"
 import { usePoll } from "@/lib/api"
 import { cn } from "@/lib/utils"
+
+interface RefereeData {
+  job: string
+  tileIndex: number
+  cheatRow: number
+  agree: boolean
+  divergentRow: number | null
+  comparisons: number
+  rowsRecomputed: number
+  totalRows: number
+  winner: string | null
+  speedup: number
+  convicted: string
+}
+
+function RefereeCard() {
+  const { data } = usePoll<RefereeData>("/api/verify/referee", 4000)
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <Crosshair className="size-4 text-primary" />
+        <h2 className="text-sm font-medium text-foreground">Refereed-delegation recompute</h2>
+        <span className="ml-auto font-mono text-[11px] text-tertiary">verification cost → logarithmic</span>
+      </div>
+      <p className="mb-3 max-w-3xl text-pretty text-[12px] text-muted-foreground">
+        When two nodes disagree, the referee doesn&apos;t recompute the whole tile (the 2× replication tax). It treats
+        the computation as a sequential trace, binary-searches to the <em>first divergent step</em>, and recomputes only
+        that one step to convict the cheater — driving verification from O(n) toward O(log n).
+      </p>
+      {data && !data.agree ? (
+        <div className="grid grid-cols-2 gap-3 font-mono text-[12px] sm:grid-cols-4">
+          <Cell label="divergent row" value={`#${data.divergentRow}`} />
+          <Cell label="binary-search steps" value={`${data.comparisons}`} sub={`~log₂(${data.totalRows})`} />
+          <Cell label="rows recomputed" value={`${data.rowsRecomputed} / ${data.totalRows}`} sub="vs full recompute" tint="text-primary" />
+          <Cell label="speedup" value={`${data.speedup}×`} tint="text-primary" />
+          <div className="col-span-2 sm:col-span-4 rounded-xl border border-border bg-secondary/30 p-3 text-[12px]">
+            <span className="text-tertiary">live challenge:</span>{" "}
+            <span className="text-foreground">{data.job} · tile {data.tileIndex}</span> — referee convicted{" "}
+            <span className="text-status-offline">{data.convicted}</span> at row {data.divergentRow}.
+          </div>
+        </div>
+      ) : (
+        <p className="font-mono text-[12px] text-tertiary">running a live challenge…</p>
+      )}
+    </div>
+  )
+}
+
+function Cell({ label, value, sub, tint }: { label: string; value: string; sub?: string; tint?: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-secondary/30 p-3">
+      <p className="text-[10px] uppercase tracking-wider text-tertiary">{label}</p>
+      <p className={cn("mt-1 text-lg font-semibold tabular-nums", tint ?? "text-foreground")}>{value}</p>
+      {sub && <p className="text-[10px] text-muted-foreground">{sub}</p>}
+    </div>
+  )
+}
 
 interface NodeRow {
   name: string
@@ -110,6 +167,9 @@ export function VerificationView() {
           replication tax) is the whole business.
         </p>
       </div>
+
+      {/* refereed-delegation recompute — logarithmic verification */}
+      <RefereeCard />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* reputation leaderboard */}

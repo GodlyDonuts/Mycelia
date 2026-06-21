@@ -102,6 +102,22 @@ export function computeTile(p: JobRenderParams, index: number): Uint8Array {
   return out
 }
 
+/** Compute a single row of a tile (one scanline) — the unit a referee recomputes. */
+export function computeRow(p: JobRenderParams, index: number, row: number): Uint8Array {
+  const g = tileGeometry(p, index)
+  const w = p.tilePx
+  const out = new Uint8Array(w)
+  const dx = (g.cx1 - g.cx0) / w
+  const dy = (g.cy1 - g.cy0) / p.tilePx
+  const cim = g.cy0 + dy * row
+  for (let x = 0; x < w; x++) {
+    const cre = g.cx0 + dx * x
+    const it = escape(cre, cim, p.maxIter)
+    out[x] = it >= p.maxIter ? 0 : 1 + ((it * 254) / p.maxIter) | 0
+  }
+  return out
+}
+
 /** Fast deterministic FNV-1a 32-bit hash over bytes → 8-char hex. */
 export function hashBytes(bytes: Uint8Array): string {
   let h = 0x811c9dc5
