@@ -99,7 +99,32 @@ async function jitterTelemetry() {
   )
 }
 
+/**
+ * Straggler reclaim (PLAN risk: node churn / straggler long tail). A tile a node
+ * claimed but never returned (e.g. a browser tab that left) is requeued so it
+ * can't strand the render. Tail latency, not average throughput, is the pain.
+ */
+async function reclaimStragglers() {
+  // capture who stranded each tile before we clear the assignment
+  const strays = await query<{ tile_index: number; assigned_node_name: string | null }>(
+    `SELECT tile_index, assigned_node_name FROM tiles
+     WHERE status='claimed' AND claimed_at < now() - interval '12 seconds'`,
+  )
+  if (strays.length === 0) return
+  await query(
+    `UPDATE tiles SET status='pending', assigned_node_id=NULL, assigned_node_name=NULL
+     WHERE status='claimed' AND claimed_at < now() - interval '12 seconds'`,
+  )
+  for (const t of strays) {
+    await query(`INSERT INTO net_events(kind,node_name,detail) VALUES ('tile-reclaimed',$1,$2)`, [
+      t.assigned_node_name ?? "scheduler",
+      `straggler · tile ${t.tile_index} requeued`,
+    ])
+  }
+}
+
 async function tick() {
+  await reclaimStragglers()
   const jobId = await ensureActiveRender()
   if (!jobId) return
   const nodes = await pickSimNodes(TILES_PER_TICK)
