@@ -13,6 +13,7 @@ import {
   Bell,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { usePoll } from "@/lib/api"
 import { MyceliumMark } from "@/components/mycelium-mark"
 
 type NavItem = { label: string; icon: typeof LayoutDashboard; href: string }
@@ -21,7 +22,7 @@ const NAV: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Marketplace", icon: Store, href: "/marketplace" },
   { label: "Network", icon: Network, href: "/network" },
-  { label: "Earnings", icon: Wallet, href: "#" },
+  { label: "Earnings", icon: Wallet, href: "/ledger" },
 ]
 
 function NavList({ active = "Dashboard", onNavigate }: { active?: string; onNavigate?: () => void }) {
@@ -70,8 +71,10 @@ function Brand() {
   )
 }
 
-/** Topbar MYC credit balance — wire `balance` to the live wallet/ledger feed. */
-function CreditBalance({ balance = "48,210" }: { balance?: string }) {
+/** Topbar MYC credit balance — live "your" earnings from the ledger. */
+function CreditBalance() {
+  const { data } = usePoll<{ totalEarnings: number }>("/api/dashboard", 2000)
+  const balance = (data?.totalEarnings ?? 48210).toLocaleString("en-US")
   return (
     <div className="flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-1.5">
       <Coins className="size-4 text-primary" strokeWidth={1.75} />
