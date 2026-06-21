@@ -13,8 +13,13 @@ export function mycToUsd(myc: number): number {
   return Math.round(myc * MYC_USD * 100) / 100
 }
 
-/** Split a per-tile reward into provider earnings and platform fee. */
+/**
+ * Split a per-tile reward into provider earnings and platform fee. The provider
+ * takes the exact remainder (perTile − fee) so provider + fee === perTile with no
+ * rounding drift — escrow always exactly covers payouts (verified by the
+ * reconciliation sweep).
+ */
 export function splitReward(perTile: number): { provider: number; fee: number } {
   const fee = Math.round(perTile * PLATFORM_FEE * 1000) / 1000
-  return { provider: Math.round((perTile - fee) * 1000) / 1000, fee }
+  return { provider: perTile - fee, fee }
 }

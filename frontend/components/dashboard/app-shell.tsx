@@ -7,6 +7,7 @@ import {
   Network,
   Wallet,
   ShieldCheck,
+  Activity,
   Settings,
   Menu,
   X,
@@ -25,6 +26,7 @@ const NAV: NavItem[] = [
   { label: "Network", icon: Network, href: "/network" },
   { label: "Trust", icon: ShieldCheck, href: "/verification" },
   { label: "Earnings", icon: Wallet, href: "/ledger" },
+  { label: "Health", icon: Activity, href: "/health" },
 ]
 
 function NavList({ active = "Dashboard", onNavigate }: { active?: string; onNavigate?: () => void }) {

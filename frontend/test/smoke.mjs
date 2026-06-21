@@ -114,6 +114,12 @@ async function main() {
     ok("garbage training delta rejected via API (skipped — no cell free)", true)
   }
 
+  // 8. verification moat + reconciliation sweep
+  const ver = (await j("/api/verification")).body
+  ok("verification reports a sellable fraction + economics", !!ver && ver.sellableFraction > 0 && ver.economics?.regimes?.length > 0, JSON.stringify(ver?.sellableFraction))
+  const health = (await j("/api/health")).body
+  ok("ledger reconciliation sweep holds (no overdraft, escrow covers payouts)", health?.reconciliation?.ok === true, JSON.stringify(health?.reconciliation))
+
   console.log(`\n${pass} passed, ${fail} failed`)
   process.exit(fail ? 1 : 0)
 }
