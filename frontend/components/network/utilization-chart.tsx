@@ -1,26 +1,25 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts"
-import { UTIL_SEED, type UtilPoint } from "@/lib/network-data"
+import { useNetwork } from "@/lib/api"
+
+type UtilPoint = { t: number; util: number }
+
+function seed(): UtilPoint[] {
+  return Array.from({ length: 48 }, (_, i) => ({ t: i, util: 62 + Math.round(Math.sin(i / 5) * 12 + Math.cos(i / 11) * 7) }))
+}
 
 export function UtilizationChart() {
-  const [data, setData] = useState<UtilPoint[]>(UTIL_SEED)
+  const net = useNetwork()
+  const [data, setData] = useState<UtilPoint[]>(seed)
+  const tRef = useRef(48)
 
-  // SSE: cluster utilization samples arrive a few times per second. We shift a
-  // fixed-width window and push a smoothly-varying new sample each tick.
+  // Append the live cluster-utilization sample as each network frame arrives.
   useEffect(() => {
-    const id = setInterval(() => {
-      setData((prev) => {
-        const lastT = prev[prev.length - 1].t
-        const last = prev[prev.length - 1].util
-        // random walk bounded to a believable 45–95% band
-        const next = Math.max(45, Math.min(95, last + (Math.random() - 0.5) * 8))
-        return [...prev.slice(1), { t: lastT + 1, util: Math.round(next) }]
-      })
-    }, 1100)
-    return () => clearInterval(id)
-  }, [])
+    if (net?.utilization == null) return
+    setData((prev) => [...prev.slice(1), { t: tRef.current++, util: Math.round(net.utilization) }])
+  }, [net?.utilization])
 
   const current = data[data.length - 1].util
 
@@ -33,7 +32,6 @@ export function UtilizationChart() {
         </div>
         <span className="font-mono text-lg font-semibold tabular-nums text-primary">{current}%</span>
       </div>
-
       <div className="h-40 w-full flex-1">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
@@ -44,15 +42,7 @@ export function UtilizationChart() {
               </linearGradient>
             </defs>
             <YAxis domain={[0, 100]} hide />
-            <Area
-              type="monotone"
-              dataKey="util"
-              stroke="var(--color-primary)"
-              strokeWidth={2}
-              fill="url(#util-fill)"
-              isAnimationActive={false}
-              dot={false}
-            />
+            <Area type="monotone" dataKey="util" stroke="var(--color-primary)" strokeWidth={2} fill="url(#util-fill)" isAnimationActive={false} dot={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
