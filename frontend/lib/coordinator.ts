@@ -268,7 +268,10 @@ export async function submitResult(input: {
   await logEvent("credited", input.nodeName, `+${provider.toFixed(1)} MYC`)
   if (result.jobDone) await settle(tile.job_id)
 
-  return { ok: true, verified: true, diffPct: check.diffPct, reward: provider, jobDone: result.jobDone }
+  // Honest, idempotent response: a re-submit of an already-verified tile is a
+  // no-op (the guarded UPDATE paid nothing), so report reward 0 — not the full
+  // payout. The tile is still verified; only the FIRST verify earns.
+  return { ok: true, verified: true, diffPct: check.diffPct, reward: result.paid ? provider : 0, jobDone: result.jobDone }
 }
 
 // ---- /settle ---------------------------------------------------------------
