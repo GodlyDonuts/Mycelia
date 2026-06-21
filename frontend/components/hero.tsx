@@ -1,7 +1,8 @@
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { MyceliumBackground } from "@/components/mycelium-background"
 import { ArrowRight } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export function Hero() {
   return (
@@ -25,23 +26,26 @@ export function Hero() {
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Button
-            size="lg"
-            className="group h-11 w-full gap-2 bg-primary px-6 font-medium text-primary-foreground hover:bg-primary/90 sm:w-auto"
-            render={<Link href="/network" />}
+          <Link
+            href="/network"
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "group h-11 w-full gap-2 bg-primary px-6 font-medium text-primary-foreground hover:bg-primary/90 sm:w-auto",
+            )}
           >
             Become a Cultivator
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-          </Button>
-          <Button
-            size="lg"
-            variant="ghost"
-            className="h-11 w-full gap-2 px-5 text-foreground hover:bg-secondary sm:w-auto"
-            render={<Link href="/marketplace" />}
+          </Link>
+          <Link
+            href="/marketplace"
+            className={cn(
+              buttonVariants({ size: "lg", variant: "ghost" }),
+              "h-11 w-full gap-2 px-5 text-foreground hover:bg-secondary sm:w-auto",
+            )}
           >
             Submit a job
             <ArrowRight className="size-4 text-muted-foreground" />
-          </Button>
+          </Link>
         </div>
 
         <p className="mt-8 font-mono text-xs text-tertiary">
