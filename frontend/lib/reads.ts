@@ -86,7 +86,8 @@ export async function getNetwork() {
             coalesce((n.capability->>'cap')::float8, 0.5) AS cap,
             (coalesce(t.gpu_pct,40)/100.0) AS load, t.current_job AS job
      FROM nodes n LEFT JOIN node_telemetry_current t ON t.node_id=n.id
-     WHERE n.status='online' ORDER BY n.is_simulated, random() LIMIT 13`,
+     WHERE n.status='online'
+     ORDER BY n.is_simulated ASC, n.reputation DESC, n.id LIMIT 13`,
   )
   const graphNodes = sample.map((n, i) => {
     const angle = (i / Math.max(1, sample.length)) * Math.PI * 2

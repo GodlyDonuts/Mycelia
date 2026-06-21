@@ -1,110 +1,141 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { RENDER_TILES, TILE_GRID, type RenderTile } from "@/lib/network-data"
+import { base64ToBytes } from "@/lib/fractal"
+import { tileImageData } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
-export function LiveRenderPanel() {
-  const [tiles, setTiles] = useState<RenderTile[]>(RENDER_TILES)
-  // tiles that just landed get a brief shimmer flash
-  const [flash, setFlash] = useState<Set<number>>(new Set())
-  const computingRef = useRef<number | null>(null)
+interface RenderTile {
+  index: number
+  state: "done" | "computing" | "pending"
+  node: string
+  gpuMs: number
+  px0: number
+  py0: number
+  b64: string | null
+}
+interface ActiveRender {
+  jobId: string
+  name: string
+  width: number
+  height: number
+  tilePx: number
+  cols: number
+  total: number
+  completed: number
+  status: string
+  tiles: RenderTile[]
+}
 
-  // SSE: the render coordinator pushes `{tile, state, gpuMs}` as each tile is
-  // verified. Here we walk pending -> computing -> done on an interval and
-  // restart once the image fully resolves, so the assembly loops forever.
+export function LiveRenderPanel() {
+  const [render, setRender] = useState<ActiveRender | null>(null)
+  const [flash, setFlash] = useState<Set<number>>(new Set())
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const drawn = useRef<Map<string, Set<number>>>(new Map())
+
+  // Poll the live render at the 1s active beat (PLAN.md §3) and paint each
+  // newly-verified tile's REAL computed pixels onto the canvas.
   useEffect(() => {
-    const id = setInterval(() => {
-      setTiles((prev) => {
-        const next = [...prev]
-        // clear a tile that was computing -> mark done + flash
-        if (computingRef.current != null) {
-          const c = computingRef.current
-          next[c] = { ...next[c], state: "done" }
-          setFlash((f) => new Set(f).add(c))
+    let alive = true
+    const run = async () => {
+      try {
+        const res = await fetch("/api/render/active", { cache: "no-store" })
+        const data: ActiveRender | null = await res.json()
+        if (!alive || !data) return
+        setRender(data)
+        const canvas = canvasRef.current
+        if (!canvas) return
+        if (canvas.width !== data.width) {
+          canvas.width = data.width
+          canvas.height = data.height
+        }
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+        // reset the drawn-cache when the job changes
+        if (!drawn.current.has(data.jobId)) {
+          drawn.current = new Map([[data.jobId, new Set()]])
+          ctx.fillStyle = "#0a0e0d"
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
+        }
+        const seen = drawn.current.get(data.jobId)!
+        const fresh: number[] = []
+        for (const t of data.tiles) {
+          if (t.state === "done" && t.b64 && !seen.has(t.index)) {
+            const bytes = base64ToBytes(t.b64)
+            ctx.putImageData(tileImageData(bytes, data.tilePx), t.px0, t.py0)
+            seen.add(t.index)
+            fresh.push(t.index)
+          }
+        }
+        if (fresh.length) {
+          setFlash((f) => {
+            const n = new Set(f)
+            fresh.forEach((i) => n.add(i))
+            return n
+          })
           setTimeout(() => {
             setFlash((f) => {
               const n = new Set(f)
-              n.delete(c)
+              fresh.forEach((i) => n.delete(i))
               return n
             })
           }, 650)
-          computingRef.current = null
         }
-        const pending = next.findIndex((t) => t.state === "pending")
-        if (pending === -1) {
-          // fully resolved — reset to a fresh partial render
-          return prev.map((t, i) => ({
-            ...t,
-            state: (i * 7) % 5 === 0 || (i * 13) % 7 === 0 ? "done" : "pending",
-          }))
-        }
-        next[pending] = { ...next[pending], state: "computing" }
-        computingRef.current = pending
-        return next
-      })
-    }, 420)
-    return () => clearInterval(id)
+      } catch {
+        /* keep last frame */
+      }
+    }
+    run()
+    const id = setInterval(run, 1000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
   }, [])
 
-  const done = useMemo(() => tiles.filter((t) => t.state === "done").length, [tiles])
-  const total = tiles.length
-  const pct = Math.round((done / total) * 100)
-  // rolling average GPU time across already-rendered tiles
+  const done = render?.completed ?? 0
+  const total = render?.total ?? 64
+  const cols = render?.cols ?? 8
+  const pct = total ? Math.round((done / total) * 100) : 0
   const avgGpu = useMemo(() => {
-    const d = tiles.filter((t) => t.state === "done")
+    if (!render) return 0
+    const d = render.tiles.filter((t) => t.state === "done" && t.gpuMs > 0)
     if (!d.length) return 0
     return Math.round(d.reduce((s, t) => s + t.gpuMs, 0) / d.length)
-  }, [tiles])
+  }, [render])
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-medium text-foreground">Live Render</h2>
-          <p className="font-mono text-[11px] text-tertiary">fractal-deepzoom · tiled</p>
+          <p className="truncate font-mono text-[11px] text-tertiary">{render?.name ?? "fractal-deepzoom"} · tiled</p>
         </div>
         <span className="font-mono text-[11px] tabular-nums text-primary">{pct}%</span>
       </div>
 
-      {/* tile canvas — the fractal image revealed tile-by-tile */}
+      {/* canvas reassembled from real computed tile pixels, with a live scaffold overlay */}
       <div className="relative mx-auto aspect-square w-full max-w-[20rem] overflow-hidden rounded-xl border border-border bg-background">
+        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" style={{ imageRendering: "auto" }} />
         <div
-          className="grid h-full w-full"
-          style={{ gridTemplateColumns: `repeat(${TILE_GRID}, 1fr)`, gridTemplateRows: `repeat(${TILE_GRID}, 1fr)` }}
+          className="absolute inset-0 grid"
+          style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${cols}, 1fr)` }}
         >
-          {tiles.map((tile) => {
-            const col = tile.id % TILE_GRID
-            const row = Math.floor(tile.id / TILE_GRID)
-            const bgX = (col / (TILE_GRID - 1)) * 100
-            const bgY = (row / (TILE_GRID - 1)) * 100
+          {render?.tiles.map((tile) => {
             const isDone = tile.state === "done"
             const isComputing = tile.state === "computing"
             return (
-              <div key={tile.id} className="relative">
-                {/* the actual image slice for this tile, revealed when done */}
-                <div
-                  className="absolute inset-0 transition-opacity duration-500"
-                  style={{
-                    backgroundImage: "url(/fractal-deepzoom.png)",
-                    backgroundSize: `${TILE_GRID * 100}% ${TILE_GRID * 100}%`,
-                    backgroundPosition: `${bgX}% ${bgY}%`,
-                    opacity: isDone ? 1 : 0,
-                  }}
-                />
-                {/* pending scaffold */}
+              <div key={tile.index} className="relative">
                 {!isDone && (
-                  <div className={cn("absolute inset-0 border border-border/40 bg-secondary/30", isComputing && "bg-primary/10")} />
+                  <div className={cn("absolute inset-0 border border-border/30 bg-secondary/40 backdrop-blur-[1px]", isComputing && "bg-primary/10")} />
                 )}
-                {/* computing shimmer sweep */}
                 {isComputing && (
                   <div className="absolute inset-0 overflow-hidden">
                     <div className="absolute inset-y-0 -left-full w-full bg-gradient-to-r from-transparent via-primary/40 to-transparent [animation:shimmer_0.9s_linear_infinite]" />
                   </div>
                 )}
-                {/* brief flash as a freshly-verified tile lands */}
-                {flash.has(tile.id) && (
-                  <div className="absolute inset-0 bg-primary/30 [animation:fade-in-up_0.3s_ease-out]" />
+                {flash.has(tile.index) && (
+                  <div className="absolute inset-0 bg-primary/40 [animation:fade-in-up_0.3s_ease-out]" />
                 )}
               </div>
             )
@@ -112,7 +143,6 @@ export function LiveRenderPanel() {
         </div>
       </div>
 
-      {/* mono readouts */}
       <div className="mt-4 grid grid-cols-3 gap-3 font-mono text-[11px]">
         <div className="flex flex-col">
           <span className="text-tertiary">tiles</span>
@@ -124,7 +154,7 @@ export function LiveRenderPanel() {
         </div>
         <div className="flex flex-col">
           <span className="text-tertiary">resolution</span>
-          <span className="tabular-nums text-foreground">4096²</span>
+          <span className="tabular-nums text-foreground">{render ? `${render.width}²` : "512²"}</span>
         </div>
       </div>
     </div>
