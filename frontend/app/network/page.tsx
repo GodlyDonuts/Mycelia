@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { AppShell } from "@/components/dashboard/app-shell"
 import { ClusterStatBand } from "@/components/network/cluster-stat-band"
+import { JoinMesh } from "@/components/network/join-mesh"
 import { MyceliumGraph } from "@/components/network/mycelium-graph"
 import { LiveRenderPanel } from "@/components/network/live-render-panel"
 import { TrainingPanel } from "@/components/network/training-panel"
@@ -29,6 +30,9 @@ export default function NetworkPage() {
 
         {/* aggregate header band */}
         <ClusterStatBand />
+
+        {/* zero-install browser worker — real client-side fractal compute */}
+        <JoinMesh />
 
         {/* primary row: the mesh graph (showpiece) + live render */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
