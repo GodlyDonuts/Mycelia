@@ -17,6 +17,7 @@ import {
   hashBytes,
 } from "./fractal"
 import { JobSpecSchema, type JobSpec, tierToCapabilityClass } from "./jobspec"
+import { MAX_RESULT_B64 } from "./policy"
 
 async function logEvent(kind: string, node: string | null, detail: string) {
   await query(`INSERT INTO net_events(kind,node_name,detail) VALUES ($1,$2,$3)`, [kind, node, detail])
@@ -150,6 +151,12 @@ export async function submitResult(input: {
   resultB64: string
   gpuMs?: number
 }): Promise<SubmitResultOut> {
+  // Early DoS guard (#35): reject an oversized blob before it's decoded or
+  // recomputed. Tiles are tiny; a huge payload is either a bug or an attack.
+  if (input.resultB64.length > MAX_RESULT_B64) {
+    return { ok: false, verified: false, diffPct: 1, reward: 0, jobDone: false }
+  }
+
   const tile = await queryOne<{
     id: string; job_id: string; tile_index: number; params: JobRenderParams; status: string
   }>(`SELECT id, job_id, tile_index, params, status FROM tiles WHERE id=$1`, [input.tileId])

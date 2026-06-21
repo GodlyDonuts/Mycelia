@@ -175,6 +175,10 @@ async function main() {
   const badParse = await post("/api/jobs/parse", { prompt: "" })
   ok("empty NL prompt rejected (400)", badParse.status === 400, `status=${badParse.status}`)
 
+  // 9b. workload policy — prohibited workload rejected before escrow (#114)
+  const mining = await post("/api/submit", { name: "xmrig monero miner", type: "sim", gpuTier: "none", vram: 0, ram: 4, maxRuntimeMin: 60, replication: 1, rewardBid: 10 })
+  ok("crypto-mining workload rejected (422)", mining.status === 422 && mining.body?.error === "WORKLOAD_NOT_ALLOWED", `status=${mining.status}`)
+
   console.log(`\n${pass} passed, ${fail} failed`)
   process.exit(fail ? 1 : 0)
 }

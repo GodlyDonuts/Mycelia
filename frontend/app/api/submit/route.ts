@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { submitJob } from "@/lib/coordinator"
 import { JobSpecSchema } from "@/lib/jobspec"
+import { checkWorkloadPolicy } from "@/lib/policy"
 import { rateLimit, clientId, tooMany } from "@/lib/http"
 import { verifySession, canSubmit, accountForRole, SESSION_COOKIE } from "@/lib/auth"
 
@@ -20,6 +21,11 @@ export async function POST(req: Request) {
     const body = await req.json()
     // Re-validate against the same schema that guards the ledger (PLAN.md §6).
     const spec = JobSpecSchema.parse(body)
+    // Workload policy: reject non-allowlisted or prohibited workloads BEFORE any
+    // funds escrow (#111 allowlist / #114 disallowlist). Running untrusted code on
+    // volunteers' machines makes this a safety boundary, not just product scope.
+    const policy = checkWorkloadPolicy(spec)
+    if (!policy.ok) return NextResponse.json({ ok: false, error: "WORKLOAD_NOT_ALLOWED", reason: policy.reason }, { status: 422 })
     const out = await submitJob(spec, { requesterId: session ? accountForRole(session.role) : undefined })
     return NextResponse.json({ ok: true, ...out })
   } catch (err) {
