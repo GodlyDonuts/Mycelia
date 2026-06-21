@@ -137,6 +137,10 @@ async function main() {
   ok("Monte Carlo workload verifies honest + rejects tampered", !!mc && mc.verified > 0 && mc.rejected >= 1, JSON.stringify(mc))
   const ref = (await j("/api/verify/referee")).body
   ok("refereed recompute convicts a cheater with ~log cost", !!ref && ref.agree === false && ref.rowsRecomputed === 1 && ref.comparisons <= 8, JSON.stringify(ref))
+  const inf = (await j("/api/inference")).body
+  ok("inference workload verifies + rejects tampered", !!inf && inf.verified > 0 && inf.rejected >= 1 && inf.throughput > 0, JSON.stringify(inf))
+  const pipe = (await j("/api/training/pipeline")).body
+  ok("model-sharded pipeline is gradient-equivalent to monolithic", pipe?.equivalentToMonolithic === true, JSON.stringify(pipe))
 
   // 8d. auth role gating: a signed-in Provider cannot submit
   const login = await fetch(BASE + "/api/auth/login", {
