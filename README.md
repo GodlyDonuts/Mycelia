@@ -84,7 +84,7 @@ Next.js 16 route handlers ──► lib/coordinator.ts ──► lib/db (ONE sha
 
 Key modules: [`lib/coordinator.ts`](frontend/lib/coordinator.ts), [`lib/driver.ts`](frontend/lib/driver.ts), [`lib/fractal.ts`](frontend/lib/fractal.ts), [`lib/db/`](frontend/lib/db), [`lib/reads.ts`](frontend/lib/reads.ts), [`lib/compute-client.ts`](frontend/lib/compute-client.ts), [`lib/mcp-tools.ts`](frontend/lib/mcp-tools.ts).
 
-**Full technical reference:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — data model, job lifecycle, ledger invariants, the fractal kernel, the driver, the API surface, the PGlite→DSQL swap, and gotchas. Agent/contributor quickstart: [`CLAUDE.md`](CLAUDE.md). Dev guide: [`frontend/README.md`](frontend/README.md).
+**Full technical reference:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — data model, job lifecycle, ledger invariants, the fractal kernel, the driver, the API surface, the PGlite→DSQL swap, and gotchas. **Doing the AWS integration?** Start with [`docs/AWS_ONBOARDING.md`](docs/AWS_ONBOARDING.md). Agent/contributor quickstart: [`CLAUDE.md`](CLAUDE.md). Dev guide: [`frontend/README.md`](frontend/README.md).
 
 ## Roadmap
 

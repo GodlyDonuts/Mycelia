@@ -93,6 +93,8 @@ All route handlers are `runtime = "nodejs"`, `dynamic = "force-dynamic"`.
 
 Only [`frontend/lib/db/index.ts`](../frontend/lib/db/index.ts) changes: replace the PGlite instance with the first-party DSQL Node connector (cached IAM token, `attachDatabasePool`), keeping the same `getDb`/`query`/`withTx` surface. The `withTx` wrapper already implements the SQLSTATE **40001 retry-with-backoff** that DSQL's OCC requires. `schema.sql` and all callers are unchanged.
 
+**Doing this migration?** [`docs/AWS_ONBOARDING.md`](AWS_ONBOARDING.md) is the step-by-step onboarding guide — the exact `lib/db` contract, a ready-to-fill DSQL connector sketch (IAM token + TLS + keep-alive), the Phase-3 work sequenced by dependency, and the acceptance gate that must stay green against DSQL.
+
 ## 9. Gotchas (learned the hard way)
 
 - **Never call the module-level `query()`/`withTx()` inside a `withTx` callback.** PGlite has a single connection — a `pg.query` issued while a transaction is open waits for the tx to release, which waits for the callback → **deadlock**. Use the `tx` handle passed into the callback.
