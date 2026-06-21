@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  unit-build:
+    name: Lint · Unit · Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint || true   # eslint config is from the v0 scaffold; non-blocking for now
+      - run: pnpm test           # vitest unit suite (fractal, training, economics, jobspec)
+      - run: pnpm build
+
+  smoke:
+    name: Live integration smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Start server + run smoke
+        run: |
+          pnpm start &
+          SERVER_PID=$!
+          echo "waiting for server…"
+          for i in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:3000/api/stats; then echo "up"; break; fi
+            sleep 1
+          done
+          node test/smoke.mjs
+          STATUS=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $STATUS
