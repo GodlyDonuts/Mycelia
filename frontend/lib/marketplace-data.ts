@@ -32,6 +32,8 @@ export type JobListing = {
   /** how many cultivator nodes are attached */
   replication: number
   requester: string
+  /** SLA tier (priority scheduling) */
+  tier?: "standard" | "priority" | "realtime"
 }
 
 export const JOB_TYPE_META: Record<

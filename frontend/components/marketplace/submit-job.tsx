@@ -13,6 +13,7 @@ import {
   type JobType,
   type GpuTier,
 } from "@/lib/marketplace-data"
+import { SLA_TIERS, SLA_MULTIPLIER } from "@/lib/jobspec"
 
 // ---- field primitives ----------------------------------------------------
 
@@ -63,6 +64,7 @@ export function SubmitJob() {
   const [form, setForm] = useState<JobFormState>({ ...EMPTY_JOB, name: "" })
   const [autofilled, setAutofilled] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [tier, setTier] = useState<"standard" | "priority" | "realtime">("standard")
   const [result, setResult] = useState<{ jobId?: string; error?: string } | null>(null)
 
   const set = <K extends keyof JobFormState>(key: K, value: JobFormState[K]) =>
@@ -76,7 +78,7 @@ export function SubmitJob() {
       const res = await fetch("/api/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, tier }),
       })
       const data = await res.json()
       if (data.ok) setResult({ jobId: data.jobId })
@@ -252,6 +254,18 @@ export function SubmitJob() {
                   MYC
                 </span>
               </div>
+            </Field>
+          </div>
+
+          <div className="sm:col-span-2">
+            <Field label="SLA tier" hint={tier !== "standard" ? `${SLA_MULTIPLIER[tier]}× price · priority scheduling` : "first-come scheduling"}>
+              <select className={inputCls} value={tier} onChange={(e) => setTier(e.target.value as typeof tier)}>
+                {SLA_TIERS.map((t) => (
+                  <option key={t} value={t} className="bg-card">
+                    {t === "standard" ? "Standard" : t === "priority" ? `Priority (${SLA_MULTIPLIER.priority}× price)` : `Realtime (${SLA_MULTIPLIER.realtime}× price)`}
+                  </option>
+                ))}
+              </select>
             </Field>
           </div>
         </div>

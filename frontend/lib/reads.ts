@@ -170,7 +170,7 @@ export async function getActiveRender() {
 
 export async function getMarketplace() {
   const listings = await query<{
-    id: string; name: string; type: string; req_gpu_model: string | null; params: { vram?: number; ram?: number } | null
+    id: string; name: string; type: string; req_gpu_model: string | null; params: { vram?: number; ram?: number; tier?: string } | null
     reward_bid_myc: string; total_tiles: number; completed_tiles: number; status: string; replication_factor: number
     requester_name: string | null; deadline_at: string | null
   }>(
@@ -197,6 +197,7 @@ export async function getMarketplace() {
       status: mapStatus(j.status),
       replication: j.replication_factor,
       requester: j.requester_name ?? "mycelia",
+      tier: j.params?.tier ?? "standard",
     })),
     market: {
       supply: Math.round(num(market?.supply_units)),

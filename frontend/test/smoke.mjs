@@ -161,6 +161,10 @@ async function main() {
   const overRedeem = await post("/api/wallet/redeem", { amount: (w1.balance || 0) + 100000, method: "crypto" })
   ok("over-balance redemption rejected (402)", overRedeem.status === 402, `status=${overRedeem.status}`)
 
+  // 8f. SLA tiers
+  const sla = await post("/api/submit", { name: "sla", type: "render", gpuTier: "4090", vram: 24, ram: 64, maxRuntimeMin: 30, replication: 1, rewardBid: 120, tier: "priority" })
+  ok("SLA-tier job accepted + reflected on the board", sla.body?.ok === true && ((await j("/api/marketplace")).body.listings.some((l) => l.tier && l.tier !== "standard")), JSON.stringify(sla.body))
+
   // 9. input hardening — malformed bodies rejected with 400
   const badSubmit = await post("/api/submit", { name: "x" })
   ok("malformed /submit rejected (400)", badSubmit.status === 400, `status=${badSubmit.status}`)

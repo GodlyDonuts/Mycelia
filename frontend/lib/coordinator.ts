@@ -56,7 +56,7 @@ export async function submitJob(
       `INSERT INTO jobs(requester_id,name,type,params,req_gpu_model,total_tiles,completed_tiles,replication_factor,reward_bid_myc,status,requester_name,deadline_at,created_at)
        VALUES ($1,$2,$3,$4,$5,$6,0,$7,$8,'running',$9, now() + ($10 || ' minutes')::interval, now())
        RETURNING id`,
-      [requesterId, parsed.name, parsed.type, JSON.stringify({ ...render, gpuTier: parsed.gpuTier, capClass }),
+      [requesterId, parsed.name, parsed.type, JSON.stringify({ ...render, gpuTier: parsed.gpuTier, capClass, tier: parsed.tier }),
        parsed.gpuTier, total, parsed.replication, reward, "you", String(parsed.maxRuntimeMin)],
     )
     const jobId = job!.id
@@ -112,7 +112,7 @@ export async function pullWork(node: { id: string; name: string }, jobId?: strin
      WHERE id = (
        SELECT t.id FROM tiles t JOIN jobs j ON j.id = t.job_id
        WHERE t.status='pending' AND j.status='running' ${jobId ? "AND t.job_id = $3" : ""}
-       ORDER BY random() LIMIT 1
+       ORDER BY CASE j.params->>'tier' WHEN 'realtime' THEN 0 WHEN 'priority' THEN 1 ELSE 2 END, random() LIMIT 1
      )
      RETURNING id, job_id, tile_index, params, px0, py0, px1, py1`,
     jobId ? [node.id, node.name, jobId] : [node.id, node.name],

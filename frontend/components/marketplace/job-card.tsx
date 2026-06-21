@@ -78,6 +78,11 @@ export function JobCard({ job, mounted }: { job: JobListing; mounted: boolean })
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <TypeBadge type={job.type} />
+            {job.tier && job.tier !== "standard" && (
+              <span className={cn("inline-flex items-center rounded-md px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider", job.tier === "realtime" ? "bg-accent/15 text-accent" : "bg-primary/10 text-primary")}>
+                {job.tier}
+              </span>
+            )}
             <span className="truncate font-mono text-[11px] text-tertiary">{job.id}</span>
           </div>
           <h3 className="mt-1.5 truncate text-sm font-medium text-foreground">{job.name}</h3>
