@@ -120,6 +120,14 @@ async function main() {
   const health = (await j("/api/health")).body
   ok("ledger reconciliation sweep holds (no overdraft, escrow covers payouts)", health?.reconciliation?.ok === true, JSON.stringify(health?.reconciliation))
 
+  // 9. input hardening — malformed bodies rejected with 400
+  const badSubmit = await post("/api/submit", { name: "x" })
+  ok("malformed /submit rejected (400)", badSubmit.status === 400, `status=${badSubmit.status}`)
+  const badPull = await post("/api/pull-work", {})
+  ok("malformed /pull-work rejected (400)", badPull.status === 400, `status=${badPull.status}`)
+  const badParse = await post("/api/jobs/parse", { prompt: "" })
+  ok("empty NL prompt rejected (400)", badParse.status === 400, `status=${badParse.status}`)
+
   console.log(`\n${pass} passed, ${fail} failed`)
   process.exit(fail ? 1 : 0)
 }

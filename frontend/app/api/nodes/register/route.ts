@@ -1,22 +1,28 @@
 import { NextResponse } from "next/server"
 import { registerNode } from "@/lib/coordinator"
+import { RegisterBody } from "@/lib/contracts"
+import { rateLimit, clientId, tooMany, badRequest } from "@/lib/http"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function POST(req: Request) {
+  const rl = rateLimit(`register:${clientId(req)}`, 30, 60_000)
+  if (!rl.ok) return tooMany(rl.retryAfter)
+  const parsed = RegisterBody.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return badRequest("invalid node registration")
   try {
-    const body = await req.json().catch(() => ({}))
+    const b = parsed.data
     const out = await registerNode({
-      id: body.id,
-      name: body.name ?? `browser-${Math.random().toString(36).slice(2, 7)}`,
-      kind: body.kind ?? "browser",
-      gpuModel: body.gpuModel ?? "—",
+      id: b.id,
+      name: b.name ?? `browser-${Math.random().toString(36).slice(2, 7)}`,
+      kind: b.kind ?? "browser",
+      gpuModel: b.gpuModel ?? "—",
       isSimulated: false,
-      region: body.region ?? "browser",
+      region: b.region ?? "browser",
     })
     return NextResponse.json({ ok: true, ...out })
   } catch (err) {
-    return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : "error" }, { status: 400 })
+    return badRequest(err)
   }
 }

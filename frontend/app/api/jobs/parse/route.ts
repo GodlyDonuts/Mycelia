@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { JobSpecSchema } from "@/lib/jobspec"
 import { parseJobFromPrompt } from "@/lib/marketplace-data"
+import { NlParseBody } from "@/lib/contracts"
+import { rateLimit, clientId, tooMany, badRequest } from "@/lib/http"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -62,11 +64,12 @@ async function viaClaude(prompt: string): Promise<unknown | null> {
 }
 
 export async function POST(req: Request) {
+  const rl = rateLimit(`parse:${clientId(req)}`, 15, 60_000) // 15 LLM calls / minute / IP
+  if (!rl.ok) return tooMany(rl.retryAfter)
   try {
-    const { prompt } = await req.json()
-    if (!prompt || typeof prompt !== "string") {
-      return NextResponse.json({ ok: false, error: "prompt required" }, { status: 400 })
-    }
+    const parsed = NlParseBody.safeParse(await req.json())
+    if (!parsed.success) return badRequest("prompt required (1–2000 chars)")
+    const { prompt } = parsed.data
     let source: "claude" | "fallback" = "fallback"
     let raw = await viaClaude(prompt)
     if (raw) source = "claude"
