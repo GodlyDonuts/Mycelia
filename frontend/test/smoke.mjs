@@ -141,6 +141,8 @@ async function main() {
   ok("inference workload verifies + rejects tampered", !!inf && inf.verified > 0 && inf.rejected >= 1 && inf.throughput > 0, JSON.stringify(inf))
   const pipe = (await j("/api/training/pipeline")).body
   ok("model-sharded pipeline is gradient-equivalent to monolithic", pipe?.equivalentToMonolithic === true, JSON.stringify(pipe))
+  const tref = (await j("/api/training/referee")).body
+  ok("training refereed-recompute clears honest + convicts lazy/cheat", tref?.refereeRecompute?.honest?.honest === true && tref?.refereeRecompute?.lazy?.honest === false && tref?.refereeRecompute?.cheat?.honest === false, JSON.stringify(tref?.refereeRecompute))
 
   // 8d. auth role gating: a signed-in Provider cannot submit
   const login = await fetch(BASE + "/api/auth/login", {
