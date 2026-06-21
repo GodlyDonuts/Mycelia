@@ -1,14 +1,25 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Cpu, Zap, Loader2, Power } from "lucide-react"
+import { Cpu, Zap, Loader2, Power, ShieldCheck } from "lucide-react"
 import { createComputer, type Computer } from "@/lib/compute-client"
 import { cn } from "@/lib/utils"
 
 type Status = "idle" | "joining" | "working" | "waiting"
 
+// One-time, opt-in consent (#118): a machine only contributes after its operator
+// explicitly agrees. Persisted so we ask once per browser.
+const CONSENT_KEY = "mycelia.consent.v1"
+
 export function JoinMesh() {
   const [status, setStatus] = useState<Status>("idle")
+  const [consented, setConsented] = useState(false)
+  const [showConsent, setShowConsent] = useState(false)
+  const [agree, setAgree] = useState(false)
+
+  useEffect(() => {
+    try { setConsented(localStorage.getItem(CONSENT_KEY) === "1") } catch {}
+  }, [])
   const [mode, setMode] = useState<"webgpu" | "cpu" | null>(null)
   const [nodeId, setNodeId] = useState<string | null>(null)
   const [tiles, setTiles] = useState(0)
@@ -77,9 +88,62 @@ export function JoinMesh() {
     setMode(null)
   }, [])
 
+  // Gate the worker behind consent: ask once, then remember.
+  const requestJoin = useCallback(() => {
+    if (consented) { join(); return }
+    setShowConsent(true)
+  }, [consented, join])
+
+  const grantAndJoin = useCallback(() => {
+    try { localStorage.setItem(CONSENT_KEY, "1") } catch {}
+    setConsented(true)
+    setShowConsent(false)
+    join()
+  }, [join])
+
   useEffect(() => () => { running.current = false; computer.current?.dispose() }, [])
 
   const joined = status !== "idle"
+
+  if (showConsent) {
+    return (
+      <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+            <ShieldCheck className="size-5" />
+          </span>
+          <div>
+            <h2 className="text-sm font-medium text-foreground">Before you contribute</h2>
+            <p className="max-w-md text-pretty text-[12px] text-muted-foreground">
+              Contributing donates spare CPU/GPU cycles from this device. Untrusted job
+              code runs in a capability-denied sandbox; only coarse telemetry (device
+              class, region, earnings) is collected. You can leave the mesh at any time.
+              See the <a href="https://github.com/GodlyDonuts/Mycelia/blob/main/docs/POLICY.md" className="text-primary underline underline-offset-2">acceptable-use policy</a>.
+            </p>
+          </div>
+        </div>
+        <label className="flex items-start gap-2 text-[12px] text-muted-foreground">
+          <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 accent-primary" />
+          <span>I am of legal age in my jurisdiction and I consent to donating idle compute from this device.</span>
+        </label>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={grantAndJoin}
+            disabled={!agree}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+          >
+            <Zap className="size-4" /> Agree &amp; join
+          </button>
+          <button
+            onClick={() => setShowConsent(false)}
+            className="rounded-xl border border-border bg-secondary px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -123,7 +187,7 @@ export function JoinMesh() {
 
         {!joined ? (
           <button
-            onClick={join}
+            onClick={requestJoin}
             disabled={status === "joining"}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
           >
