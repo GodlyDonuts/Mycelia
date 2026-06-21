@@ -67,6 +67,17 @@ export function stage2(w2: number[], h: number[], target: number): { y: number; 
   const dy = 2 * (y - target)
   return { y, loss: (y - target) ** 2, gW2: h.map((hi) => dy * hi), gH: w2.map((w) => dy * w) }
 }
+/** Stage 2 forward-only (serving): produce the output from the received activation. */
+export function stage2Forward(w2: number[], h: number[]): number {
+  return w2.reduce((s, w, i) => s + w * h[i], 0)
+}
+
+/** Pipeline-parallel inference serving: forward a sample across stages → output. */
+export function serve(model: Model, z: number[]): number {
+  const { h } = stage1Forward(model.W1, z) // ──activation──▶ stage 2
+  return stage2Forward(model.w2, h)
+}
+
 /** Stage 1 backward: uses the received gH + its own activation to finish gW1. */
 export function stage1Backward(z: number[], h: number[], gH: number[]): number[][] {
   const gPre = gH.map((g, i) => g * (1 - h[i] * h[i]))

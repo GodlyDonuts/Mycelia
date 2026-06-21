@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { initModel, monolithic, pipeline, applyGrads, gradDiff, D, H } from "@/lib/training/pipeline"
+import { initModel, monolithic, pipeline, applyGrads, gradDiff, serve, D, H } from "@/lib/training/pipeline"
 
 function teacher() {
   return initModel(0xfeed)
@@ -45,6 +45,14 @@ describe("model-sharded pipeline (Regime 2)", () => {
       }
     }
     expect(lossOf()).toBeLessThan(start * 0.2)
+  })
+
+  it("pipeline serving (forward) equals monolithic forward", () => {
+    const m = initModel(4)
+    for (let s = 0; s < 20; s++) {
+      const z = sample(500 + s)
+      expect(serve(m, z)).toBeCloseTo(monolithic(m, z, 0).y, 12)
+    }
   })
 
   it("stage shapes match the split (W1 on stage 1, w2 on stage 2)", () => {
