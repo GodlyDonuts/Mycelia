@@ -8,6 +8,8 @@ code* — the SQL, transactions, and optimistic-concurrency retry are already th
 real DSQL design.
 
 This doc gets you from `git clone` to a clear, sequenced plan in ~30 minutes.
+For the exact first-connection console/IAM steps, use
+[`docs/AURORA_DSQL_CONNECT.md`](AURORA_DSQL_CONNECT.md).
 
 ---
 
@@ -258,8 +260,8 @@ Auth to AWS should be **OIDC→IAM federation**, not static keys ([#51](https://
 
 1. Run it locally; watch the Network screen; run the four test suites green.
 2. Read `lib/db/index.ts` end-to-end (it's ~120 lines) and §8/§9 of ARCHITECTURE.md.
-3. Stand up a DSQL cluster ([#45](https://github.com/GodlyDonuts/Mycelia/issues/45)), get IAM-token auth working ([#51](https://github.com/GodlyDonuts/Mycelia/issues/51)).
-4. Rewrite `lib/db/index.ts` against DSQL (sketch in §3); run `schema.sql` as a migration.
+3. Stand up a DSQL cluster ([#45](https://github.com/GodlyDonuts/Mycelia/issues/45)), get IAM-token auth working ([#51](https://github.com/GodlyDonuts/Mycelia/issues/51)). Use [`AURORA_DSQL_CONNECT.md`](AURORA_DSQL_CONNECT.md) for the exact AWS Console/IAM runbook.
+4. Set `MYCELIA_DB_BACKEND=dsql`; run `schema.sql` as a migration with `pnpm db:dsql:migrate`.
 5. Run `pnpm test:smoke && pnpm test:statemachine && pnpm test:fuzz` against the
    DSQL-backed app. **When they're green, the app is on AWS** — everything after
    that (Lambda/SQS/Fargate/S3) is moving the simulator's job onto managed services.

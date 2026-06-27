@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "db:dsql:migrate": "node scripts/migrate-dsql.mjs",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:watch": "vitest",
@@ -15,6 +16,7 @@
     "test:statemachine": "node test/statemachine.mjs"
   },
   "dependencies": {
+    "@aws-sdk/dsql-signer": "^3.1075.0",
     "@base-ui/react": "^1.5.0",
     "@electric-sql/pglite": "^0.5.3",
     "@vercel/analytics": "1.6.1",
@@ -22,6 +24,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
+    "pg": "^8.22.0",
     "react": "^19",
     "react-dom": "^19",
     "recharts": "^3.8.1",
@@ -33,6 +36,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.0",
     "@types/node": "^24",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@webgpu/types": "^0.1.70",

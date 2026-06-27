@@ -9,20 +9,41 @@
 // opening a second instance per module reload.
 
 import { PGlite } from "@electric-sql/pglite"
+import { DsqlSigner } from "@aws-sdk/dsql-signer"
+import { Pool, type PoolClient } from "pg"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
 type Sql = string
 type Params = unknown[]
 
-interface MyceliaDb {
+interface PgliteDb {
   pg: PGlite
   ready: Promise<void>
 }
 
+interface DsqlDb {
+  pool: Pool
+  tokenExpiresAt: number
+}
+
+type DbConn = PGlite | Pool
+
 declare global {
   // eslint-disable-next-line no-var
-  var __mycelia_db: MyceliaDb | undefined
+  var __mycelia_pglite_db: PgliteDb | undefined
+  // eslint-disable-next-line no-var
+  var __mycelia_dsql_db: DsqlDb | undefined
+  // eslint-disable-next-line no-var
+  var __mycelia_dsql_keep_alive_started: boolean | undefined
+}
+
+const DSQL_TOKEN_TTL_MS = 14 * 60 * 1000
+const DSQL_TOKEN_REFRESH_SKEW_MS = 60 * 1000
+const DSQL_KEEP_ALIVE_MS = 4 * 60 * 1000
+
+function useDsql(): boolean {
+  return process.env.MYCELIA_DB_BACKEND === "dsql"
 }
 
 function loadSchema(): string {
@@ -40,25 +61,82 @@ async function bootstrap(pg: PGlite): Promise<void> {
   }
 }
 
-function init(): MyceliaDb {
-  if (globalThis.__mycelia_db) return globalThis.__mycelia_db
+function initPglite(): PgliteDb {
+  if (globalThis.__mycelia_pglite_db) return globalThis.__mycelia_pglite_db
   const dir = process.env.MYCELIA_DB_DIR // optional persistence; defaults to in-memory
   const pg = dir ? new PGlite(dir) : new PGlite()
-  const db: MyceliaDb = { pg, ready: bootstrap(pg) }
-  globalThis.__mycelia_db = db
+  const db: PgliteDb = { pg, ready: bootstrap(pg) }
+  globalThis.__mycelia_pglite_db = db
   return db
 }
 
-/** Returns the shared PGlite instance, guaranteed migrated + seeded. */
-export async function getDb(): Promise<PGlite> {
-  const db = init()
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) throw new Error(`${name} is required when MYCELIA_DB_BACKEND=dsql`)
+  return value
+}
+
+function normalizeHost(value: string): string {
+  return value.replace(/^postgres(?:ql)?:\/\//, "").replace(/^https?:\/\//, "").split(/[/:]/)[0]
+}
+
+async function makeDsqlPool(): Promise<DsqlDb> {
+  const hostname = normalizeHost(requireEnv("DSQL_ENDPOINT"))
+  const region = requireEnv("AWS_REGION")
+  const caPath = requireEnv("DSQL_CA_BUNDLE")
+  const signer = new DsqlSigner({ hostname, region, expiresIn: Math.floor(DSQL_TOKEN_TTL_MS / 1000) })
+  const password = process.env.DSQL_USE_ADMIN_TOKEN === "false"
+    ? await signer.getDbConnectAuthToken()
+    : await signer.getDbConnectAdminAuthToken()
+
+  const pool = new Pool({
+    host: hostname,
+    port: Number(process.env.DSQL_PORT ?? 5432),
+    database: process.env.DSQL_DATABASE ?? "postgres",
+    user: process.env.DSQL_USER ?? "admin",
+    password,
+    max: Number(process.env.DSQL_POOL_MAX ?? 1),
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+    ssl: { ca: readFileSync(caPath, "utf8"), rejectUnauthorized: true },
+  })
+
+  return { pool, tokenExpiresAt: Date.now() + DSQL_TOKEN_TTL_MS }
+}
+
+async function getDsql(): Promise<Pool> {
+  const current = globalThis.__mycelia_dsql_db
+  if (current && Date.now() < current.tokenExpiresAt - DSQL_TOKEN_REFRESH_SKEW_MS) return current.pool
+
+  await current?.pool.end().catch(() => {})
+  const next = await makeDsqlPool()
+  globalThis.__mycelia_dsql_db = next
+
+  if (!globalThis.__mycelia_dsql_keep_alive_started) {
+    globalThis.__mycelia_dsql_keep_alive_started = true
+    setInterval(() => {
+      void getDsql().then((pool) => pool.query("SELECT 1")).catch(() => {})
+    }, DSQL_KEEP_ALIVE_MS).unref?.()
+  }
+
+  return next.pool
+}
+
+/** Returns the shared database connection. PGlite is migrated/seeded; DSQL is migrated explicitly. */
+export async function getDb(): Promise<DbConn> {
+  if (useDsql()) return getDsql()
+  const db = initPglite()
   await db.ready
   return db.pg
 }
 
 /** Convenience query that returns typed rows. */
 export async function query<T = Record<string, unknown>>(sql: Sql, params: Params = []): Promise<T[]> {
-  const pg = await getDb()
+  if (useDsql()) {
+    const res = await (await getDsql()).query(sql, params)
+    return res.rows as T[]
+  }
+  const pg = await getDb() as PGlite
   const res = await pg.query<T>(sql, params)
   return res.rows
 }
@@ -76,12 +154,13 @@ export async function queryOne<T = Record<string, unknown>>(sql: Sql, params: Pa
  * contract is identical when the driver is swapped.
  */
 export async function withTx<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
-  const pg = await getDb()
   const MAX = 5
   let lastErr: unknown
   for (let attempt = 0; attempt < MAX; attempt++) {
     try {
-      return await pg.transaction(async (t) => fn(wrapTx(t)))
+      if (useDsql()) return await withDsqlTx(fn)
+      const pg = await getDb() as PGlite
+      return await pg.transaction(async (t) => fn(wrapPgliteTx(t)))
     } catch (err: unknown) {
       lastErr = err
       const code = (err as { code?: string })?.code
@@ -100,7 +179,23 @@ export interface Tx {
   queryOne<T = Record<string, unknown>>(sql: Sql, params?: Params): Promise<T | null>
 }
 
-function wrapTx(t: { query: PGlite["query"] }): Tx {
+async function withDsqlTx<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
+  const pool = await getDsql()
+  const client = await pool.connect()
+  try {
+    await client.query("BEGIN")
+    const out = await fn(wrapPgClient(client))
+    await client.query("COMMIT")
+    return out
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {})
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+function wrapPgliteTx(t: { query: PGlite["query"] }): Tx {
   return {
     async query<T>(sql: Sql, params: Params = []) {
       const res = await t.query<T>(sql, params)
@@ -108,6 +203,19 @@ function wrapTx(t: { query: PGlite["query"] }): Tx {
     },
     async queryOne<T>(sql: Sql, params: Params = []) {
       const res = await t.query<T>(sql, params)
+      return (res.rows[0] as T) ?? null
+    },
+  }
+}
+
+function wrapPgClient(client: PoolClient): Tx {
+  return {
+    async query<T>(sql: Sql, params: Params = []) {
+      const res = await client.query(sql, params)
+      return res.rows as T[]
+    },
+    async queryOne<T>(sql: Sql, params: Params = []) {
+      const res = await client.query(sql, params)
       return (res.rows[0] as T) ?? null
     },
   }
