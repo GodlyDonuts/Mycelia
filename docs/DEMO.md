@@ -1,5 +1,7 @@
 # Mycelia — Demo Walkthrough
 
+For the rehearsed stage presentation, use the exact [four-minute demo script](DEMO_4_MINUTE_SCRIPT.md). This document is the longer feature-by-feature walkthrough.
+
 A concrete, click-by-click script for demoing the **built** app (the PLAN §9 beat sheet, adapted to what actually runs). Everything below is live against the local PGlite-backed system — no AWS, no external services required.
 
 ## Setup (30s before)
