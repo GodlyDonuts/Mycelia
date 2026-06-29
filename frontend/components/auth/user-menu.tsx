@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface User { name: string; role: "requester" | "provider" | "both" }
+interface User { name: string; role: "requester" | "provider" | "both"; email?: string | null; picture?: string | null }
 
 export function UserMenu() {
   const router = useRouter()
@@ -30,7 +30,14 @@ export function UserMenu() {
 
   const initials = user.name.slice(0, 2).toUpperCase()
   const logout = async () => {
+    // Clear the app session, and the Firebase client session if one exists.
     await fetch("/api/auth/logout", { method: "POST" })
+    try {
+      const { auth } = await import("@/lib/firebase")
+      await auth.signOut()
+    } catch {
+      /* no firebase session — fine */
+    }
     setUser(null)
     router.refresh()
   }

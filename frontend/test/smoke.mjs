@@ -46,12 +46,16 @@ async function main() {
   console.log("Mycelia smoke test →", BASE)
 
   // 1. escrow debit through the serialization row
-  const before = (await j("/api/ledger")).body.requester
+  const beforeLedger = (await j("/api/ledger")).body
+  const before = beforeLedger.requester
   const sub = await post("/api/submit", { name: "smoke", type: "render", gpuTier: "4090", vram: 24, ram: 64, maxRuntimeMin: 30, replication: 2, rewardBid: 200, image: "", datasetUrl: "" })
   ok("submit returns ok + jobId", sub.body?.ok === true && !!sub.body.jobId, JSON.stringify(sub.body))
-  const after = (await j("/api/ledger")).body.requester
+  const afterLedger = (await j("/api/ledger")).body
+  const after = afterLedger.requester
   ok("escrow debits available by reward", Math.round(before.available - after.available) === 200, `Δ=${before.available - after.available}`)
-  ok("escrow raises reserved by reward", Math.round(after.reserved - before.reserved) === 200, `Δ=${after.reserved - before.reserved}`)
+  ok("escrow hold is recorded in the append-only ledger",
+    Math.round(afterLedger.totals.escrowHeld - beforeLedger.totals.escrowHeld) === -200,
+    `Δ=${afterLedger.totals.escrowHeld - beforeLedger.totals.escrowHeld}`)
 
   // 2. overdraft rejection (serialization-row guard)
   const over = await post("/api/submit", { name: "over", type: "render", gpuTier: "4090", vram: 24, ram: 64, maxRuntimeMin: 30, replication: 1, rewardBid: 1000000, image: "", datasetUrl: "" })

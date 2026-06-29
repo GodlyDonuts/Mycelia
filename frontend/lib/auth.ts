@@ -15,6 +15,10 @@ export interface Session {
   name: string
   role: Role
   ts: number
+  // Optional Firebase identity (present when signed in via Firebase Auth).
+  email?: string
+  picture?: string
+  uid?: string
 }
 
 /** The account a role maps to (requester escrow account vs the contributor account). */
