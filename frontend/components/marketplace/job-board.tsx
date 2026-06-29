@@ -6,7 +6,6 @@ import { cn } from "@/lib/utils"
 import { usePoll } from "@/lib/api"
 import { JobCard } from "./job-card"
 import {
-  JOB_LISTINGS,
   JOB_TYPE_META,
   GPU_TIERS,
   type JobListing,
@@ -58,11 +57,6 @@ function Select<T extends string>({
   )
 }
 
-/**
- * Left pane: the live job board. `jobs` is static mock data today — wire it to
- * the scheduler's job-board feed (WebSocket/SSE) so listings, progress bars,
- * and statuses update in place.
- */
 export function JobBoard() {
   const [mounted, setMounted] = useState(false)
   const [query, setQuery] = useState("")
@@ -70,9 +64,9 @@ export function JobBoard() {
   const [tier, setTier] = useState<GpuTier | "all">("all")
   const [reward, setReward] = useState("any")
 
-  // Live job-board feed (PLAN.md §6): replaces the static mock.
-  const { data } = usePoll<{ listings: JobListing[] }>("/api/marketplace", 3000)
-  const jobs = data?.listings ?? JOB_LISTINGS
+  // Coordinator-backed job board feed.
+  const { data, error } = usePoll<{ listings: JobListing[] }>("/api/marketplace", 3000)
+  const jobs = data?.listings ?? []
 
   useEffect(() => setMounted(true), [])
 
@@ -150,7 +144,11 @@ export function JobBoard() {
       </div>
 
       {/* list */}
-      {filtered.length > 0 ? (
+      {!data && !error ? (
+        <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center font-mono text-xs text-tertiary">loading coordinator job board…</div>
+      ) : error ? (
+        <div className="rounded-xl border border-destructive/25 bg-destructive/5 p-8 text-center font-mono text-xs text-destructive">job board unavailable: {error}</div>
+      ) : filtered.length > 0 ? (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {filtered.map((job) => (
             <JobCard key={job.id} job={job} mounted={mounted} />

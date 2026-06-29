@@ -117,7 +117,7 @@ export async function pullRoundTask(node: { id: string; name: string }): Promise
   const claimed = await queryOne<{
     id: string; job_id: string; round_id: string; data_shard_ref: string
   }>(
-    `UPDATE cells SET status='assigned', member_node_ids = ('{' || $1 || '}')::uuid[], assigned_at=now()
+    `UPDATE cells SET status='assigned', member_node_ids = $1, assigned_at=now()
      WHERE id = (
        SELECT c.id FROM cells c
        JOIN training_rounds r ON r.id = c.round_id

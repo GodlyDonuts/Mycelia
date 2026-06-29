@@ -1,0 +1,13 @@
+[package]
+name = "mycelia-sp1-guest"
+version = "0.1.0"
+edition = "2021"
+description = "SP1 zkVM guest — proves deterministic local SGD on training shard"
+
+[dependencies]
+sp1-zkvm = "4.0"
+serde = { version = "1", features = ["derive"] }
+
+[[bin]]
+name = "training_attest"
+path = "src/bin/training_attest.rs"

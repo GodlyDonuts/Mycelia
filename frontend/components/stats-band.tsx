@@ -19,12 +19,12 @@ type StatsResponse = {
   creditedMyc: number
 }
 
-// Fallback values shown until the first /api/stats frame arrives.
+// Labels and formatting only. Values come from /api/stats.
 const DEFAULT_STATS: LiveStat[] = [
-  { label: "Active nodes", value: 1284530, jitter: 240 },
-  { label: "GPUs online", value: 342118, jitter: 90 },
-  { label: "Network TFLOP/s", value: 8472.6, decimals: 1, jitter: 12 },
-  { label: "Jobs running", value: 9417, jitter: 18 },
+  { label: "Active nodes", value: 0, jitter: 0 },
+  { label: "GPUs online", value: 0, jitter: 0 },
+  { label: "Network TFLOP/s", value: 0, decimals: 1, jitter: 0 },
+  { label: "Jobs running", value: 0, jitter: 0 },
 ]
 
 // Maps a live /api/stats frame onto the four telemetry tiles (same order as
@@ -42,7 +42,7 @@ function format(n: number, decimals = 0) {
   })
 }
 
-function StatItem({ stat, target, live }: { stat: LiveStat; target: number; live: number }) {
+function StatItem({ stat, target, live, loading }: { stat: LiveStat; target: number; live: number; loading: boolean }) {
   const { ref, value } = useCountUp(target)
   const display = value >= target * 0.999 ? live : value
 
@@ -52,8 +52,8 @@ function StatItem({ stat, target, live }: { stat: LiveStat; target: number; live
         ref={ref}
         className="font-mono text-3xl tracking-tight text-foreground tabular-nums sm:text-[2.5rem]"
       >
-        {format(display, stat.decimals)}
-        {stat.suffix ?? ""}
+        {loading ? "—" : format(display, stat.decimals)}
+        {!loading && (stat.suffix ?? "")}
       </span>
       <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-tertiary">
         {stat.label}
@@ -82,6 +82,7 @@ export function StatsBand({ stats = DEFAULT_STATS }: { stats?: LiveStat[] }) {
               stat={stat}
               target={live[i] ?? stat.value}
               live={live[i] ?? stat.value}
+              loading={!data}
             />
           ))}
         </div>

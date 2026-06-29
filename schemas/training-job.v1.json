@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mycelia.dev/schemas/training-job.v1.json",
+  "title": "MyceliaTrainingJob",
+  "type": "object",
+  "required": ["modelId", "lora", "cells", "diloco"],
+  "properties": {
+    "modelId": { "type": "string", "description": "HuggingFace model id" },
+    "dataset": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string" },
+        "format": { "enum": ["jsonl", "parquet", "hf"] },
+        "sampleCount": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "lora": {
+      "type": "object",
+      "required": ["rank", "targets"],
+      "properties": {
+        "rank": { "type": "integer", "minimum": 1, "maximum": 256 },
+        "alpha": { "type": "integer" },
+        "targets": { "type": "array", "items": { "type": "string" } },
+        "dropout": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "cells": {
+      "type": "object",
+      "properties": {
+        "regime": { "enum": ["data-parallel", "pipeline-parallel", "tensor-parallel"] },
+        "count": { "type": "integer", "minimum": 1 },
+        "stagesPerCell": { "type": "integer", "minimum": 1, "default": 1 },
+        "tensorParallel": { "type": "integer", "minimum": 1, "default": 1 }
+      }
+    },
+    "diloco": {
+      "type": "object",
+      "properties": {
+        "H": { "type": "integer", "description": "Local steps between syncs" },
+        "outerLr": { "type": "number" },
+        "outerMomentum": { "type": "number" },
+        "compressionK": { "type": "number", "description": "Top-k fraction for delta compression" }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "properties": {
+        "mode": { "enum": ["canary-loss", "refereed", "zk-sp1"] },
+        "canaryFraction": { "type": "number" }
+      }
+    },
+    "regions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

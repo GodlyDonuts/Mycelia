@@ -1,20 +1,55 @@
 "use client"
 
-import { useState } from "react"
-import { Power, Thermometer, MoonStar } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Power, Thermometer, MoonStar, Check, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { usePoll } from "@/lib/api"
+
+type ProviderSettings = { contributionCapPct: number; onlyWhenIdle: boolean }
 
 export function PowerControl() {
-  // These settings would POST to the node agent config endpoint and take
-  // effect on the next heartbeat. Local state today; wire to the device API.
   const [cap, setCap] = useState(80)
   const [onlyIdle, setOnlyIdle] = useState(true)
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle")
+  const hydrated = useRef(false)
+  const { data } = usePoll<ProviderSettings>("/api/dashboard/settings", 30000)
+
+  useEffect(() => {
+    if (!data || hydrated.current) return
+    setCap(data.contributionCapPct)
+    setOnlyIdle(data.onlyWhenIdle)
+    hydrated.current = true
+  }, [data])
+
+  useEffect(() => {
+    if (!hydrated.current) return
+    setSaveState("saving")
+    const id = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/dashboard/settings", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ contributionCapPct: cap, onlyWhenIdle: onlyIdle }),
+        })
+        if (!res.ok) throw new Error("save failed")
+        setSaveState("saved")
+      } catch {
+        setSaveState("error")
+      }
+    }, 350)
+    return () => clearTimeout(id)
+  }, [cap, onlyIdle])
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="flex items-center gap-2">
         <Power className="size-4 text-primary" strokeWidth={1.75} />
         <h2 className="text-sm font-medium text-foreground">Power &amp; thermal</h2>
+        <span className={cn("ml-auto inline-flex items-center gap-1 font-mono text-[10px]", saveState === "error" ? "text-destructive" : "text-tertiary")}>
+          {saveState === "saving" && <><Loader2 className="size-3 animate-spin" /> saving</>}
+          {saveState === "saved" && <><Check className="size-3 text-primary" /> synced</>}
+          {saveState === "error" && "sync failed"}
+        </span>
       </div>
       <p className="mt-1 text-xs text-muted-foreground">
         Tune how hard your nodes work. Lower caps run cooler and quieter.

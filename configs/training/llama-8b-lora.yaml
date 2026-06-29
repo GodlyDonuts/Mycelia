@@ -1,0 +1,37 @@
+# Llama 3.1 8B — LoRA fine-tune on Mycelia mesh
+# Regime 1: pure data-parallel, 1 node per cell
+
+modelId: meta-llama/Llama-3.1-8B
+
+dataset:
+  uri: s3://mycelia-datasets/demo/alpaca-cleaned
+  format: jsonl
+  sampleCount: 52000
+
+lora:
+  rank: 16
+  alpha: 32
+  targets: [q_proj, v_proj]
+  dropout: 0.05
+
+cells:
+  regime: data-parallel
+  count: 8
+  stagesPerCell: 1
+
+diloco:
+  H: 100
+  outerLr: 0.7
+  outerMomentum: 0.9
+  compressionK: 0.02
+
+verification:
+  mode: canary-loss
+  canaryFraction: 0.05
+
+regions: [us-east-1, us-west-2, eu-west-1]
+
+precision:
+  base: int4
+  adapter: bf16
+  gradientAccum: fp32

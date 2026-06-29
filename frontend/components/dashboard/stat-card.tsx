@@ -79,24 +79,29 @@ type DashboardStats = {
   totalEarningsUsd: number
   activeNodes: number
   enrolledNodes: number
+  gpuHoursToday: number
+  cpuHoursToday: number
+  networkRank: number
+  providerCount: number
+  earningsHistory: Array<{ date: string; myc: number }>
 }
 
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US")
 
 export function StatCardRow({ stats }: { stats: StatCardData[] }) {
-  // Live aggregate metrics from the read API. The "Total Earnings" and
-  // "Active Nodes" cards take real values; the others stay cosmetic. Sparklines
-  // + delta UI are preserved. Falls back to the passed mock `stats` until the
-  // first frame loads so SSR + first paint render unchanged.
   const { data } = usePoll<DashboardStats>("/api/dashboard", 2000)
 
   const live = data
     ? stats.map((stat) => {
+        const earningsSpark = data.earningsHistory.slice(-11).map((p, i) => ({ i, v: p.myc }))
         if (stat.id === "earnings") {
           return {
             ...stat,
             value: `${fmt(data.totalEarnings)} MYC`,
             sub: `≈ $${fmt(data.totalEarningsUsd)} USD`,
+            delta: 0,
+            deltaLabel: "settled ledger total",
+            spark: earningsSpark.length > 1 ? earningsSpark : [{ i: 0, v: data.totalEarnings }],
           }
         }
         if (stat.id === "nodes") {
@@ -104,11 +109,30 @@ export function StatCardRow({ stats }: { stats: StatCardData[] }) {
             ...stat,
             value: `${data.activeNodes}`,
             sub: `of ${data.enrolledNodes} enrolled`,
+            delta: 0,
+            deltaLabel: "heartbeat status",
+            spark: [{ i: 0, v: data.activeNodes }],
           }
+        }
+        if (stat.id === "compute") return {
+          ...stat,
+          value: `${data.gpuHoursToday.toFixed(2)} GPU-h`,
+          sub: `+ ${data.cpuHoursToday.toFixed(2)} CPU-h`,
+          delta: 0,
+          deltaLabel: "verified today",
+          spark: [{ i: 0, v: data.gpuHoursToday }],
+        }
+        if (stat.id === "rank") return {
+          ...stat,
+          value: data.networkRank ? `#${fmt(data.networkRank)}` : "—",
+          sub: `of ${fmt(data.providerCount)} providers`,
+          delta: 0,
+          deltaLabel: "by settled earnings",
+          spark: [{ i: 0, v: data.networkRank || 0 }],
         }
         return stat
       })
-    : stats
+    : stats.map((stat) => ({ ...stat, value: "—", sub: "loading live ledger…", delta: 0, deltaLabel: "", spark: [] }))
 
   return (
     <section aria-label="Account summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

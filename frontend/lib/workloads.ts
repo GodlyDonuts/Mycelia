@@ -17,4 +17,9 @@ export const WORKLOADS: WorkloadClass[] = [
   { id: "inference", label: "Batched inference", verify: "reseed recompute (deterministic classifier)", status: "live", note: "fixed model over seeded batches ⇒ bitwise-verifiable" },
   { id: "render3d", label: "3D / video rendering", verify: "escrow-until-validated + spot-check", status: "roadmap", note: "Render-network-style proof-of-render" },
   { id: "etl", label: "Data ETL / scraping", verify: "redundant agreement", status: "roadmap", note: "public-data only (no usable TEE on consumer HW)" },
+  { id: "pipeline-70b", label: "Pipeline-parallel LLM (70B+)", verify: "activation checksum + refereed stage recompute", status: "roadmap", note: "Regime 2 — WebRTC activation transport between stages" },
+  { id: "tensor-parallel", label: "Tensor-parallel shard (TP≥2)", verify: "ring-allreduce commit + grad-norm bound", status: "roadmap", note: "Intra-cell NCCL over LAN; ring fallback over WAN" },
+  { id: "zk-attest", label: "SP1 zk training attestation", verify: "succinct proof of local SGD", status: "roadmap", note: "Replaces canary-loss with cryptographic guarantee" },
+  { id: "pretrain", label: "Full model pretraining", verify: "checkpoint Merkle + zk grad attestation", status: "roadmap", note: "Requires Regime-2 cells + multi-week job orchestration" },
+  { id: "federated", label: "Cross-silo federated LoRA", verify: "DiLoCo outer + differential privacy noise audit", status: "roadmap", note: "Enterprise data stays local; only adapter deltas cross wire" },
 ]

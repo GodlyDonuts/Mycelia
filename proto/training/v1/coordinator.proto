@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package mycelia.training.v1;
+
+option go_package = "github.com/mycelia/proto/training/v1";
+
+// Coordinator ↔ cell protocol for distributed LoRA training.
+
+message PullWorkRequest {
+  string node_id = 1;
+  string node_name = 2;
+  string cell_id = 3;
+  int32 stage_index = 4;
+  CapabilityReport capability = 5;
+}
+
+message CapabilityReport {
+  double tokens_per_sec = 1;
+  int32 vram_mb = 2;
+  string gpu_model = 3;
+  string region = 4;
+}
+
+message TrainingTask {
+  string round_id = 1;
+  int32 round = 2;
+  bytes adapter_delta_compressed = 3; // top-k + int8 packed
+  DataShard shard = 4;
+  int32 local_steps_h = 5;
+  int64 deadline_unix_ms = 6;
+}
+
+message DataShard {
+  int32 shard_index = 1;
+  int32 sample_count = 2;
+  bytes samples_ref = 3; // S3/R2 URI
+  uint64 content_hash = 4;
+}
+
+message SubmitContributionRequest {
+  string node_id = 1;
+  string round_id = 2;
+  bytes delta_compressed = 3;
+  double loss_before = 4;
+  double loss_after = 5;
+  optional bytes zk_proof = 6; // SP1 proof bytes (roadmap)
+}
+
+message SubmitContributionResponse {
+  bool accepted = 1;
+  string rejection_reason = 2;
+  double payout_myc = 3;
+}
+
+message ActivationEnvelope {
+  int32 stage_from = 1;
+  int32 stage_to = 2;
+  int64 seq = 3;
+  bytes payload = 4;
+  CompressionMeta compression = 5;
+}
+
+message CompressionMeta {
+  string dtype = 1; // fp16 | int8
+  float scale = 2;
+  int32 original_bytes = 3;
+}
+
+service TrainingCoordinator {
+  rpc PullWork(PullWorkRequest) returns (TrainingTask);
+  rpc SubmitContribution(SubmitContributionRequest) returns (SubmitContributionResponse);
+}
+
+service PipelineTransport {
+  rpc SendActivation(stream ActivationEnvelope) returns (stream ActivationEnvelope);
+}

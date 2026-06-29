@@ -1,0 +1,23 @@
+[package]
+name = "mycelia-cell"
+version = "0.1.0"
+edition = "2021"
+description = "Native Mycelia training cell runtime — tensor ops + P2P transport"
+license = "MIT"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+reqwest = { version = "0.12", features = ["json"] }
+ndarray = "0.16"
+tracing = "0.1"
+webrtc = "0.11"
+
+[lib]
+name = "mycelia_cell"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mycelia-cell"
+path = "src/main.rs"

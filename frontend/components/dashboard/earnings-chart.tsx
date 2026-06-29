@@ -11,8 +11,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts"
-import { EARNINGS_90D, RANGE_OPTIONS, type EarningsPoint, type RangeDays } from "@/lib/dashboard-data"
+import { RANGE_OPTIONS, type EarningsPoint, type RangeDays } from "@/lib/dashboard-data"
 import { cn } from "@/lib/utils"
+import { usePoll } from "@/lib/api"
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" })
@@ -34,11 +35,12 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: { paylo
   )
 }
 
-export function EarningsChart({ data = EARNINGS_90D }: { data?: EarningsPoint[] }) {
+export function EarningsChart() {
   const [days, setDays] = useState<RangeDays>(30)
+  const { data: payload, error } = usePoll<{ earningsHistory: EarningsPoint[] }>("/api/dashboard", 5000)
+  const data = payload?.earningsHistory ?? []
 
-  // Slice the trailing N days. History is loaded once; new points get
-  // appended live at each epoch close (wire to the ledger stream).
+  // Slice the trailing N days from append-only provider_earn ledger rows.
   const view = useMemo(() => data.slice(-days), [data, days])
   const payouts = useMemo(() => view.filter((d) => d.payout != null), [view])
   const total = useMemo(() => view.reduce((s, d) => s + d.myc, 0), [view])
@@ -74,6 +76,10 @@ export function EarningsChart({ data = EARNINGS_90D }: { data?: EarningsPoint[] 
       </div>
 
       <div className="mt-4 h-64 w-full">
+        {!payload && !error && <div className="flex h-full items-center justify-center font-mono text-xs text-tertiary">loading ledger history…</div>}
+        {error && <div className="flex h-full items-center justify-center font-mono text-xs text-destructive">ledger history unavailable</div>}
+        {payload && view.length === 0 && <div className="flex h-full items-center justify-center font-mono text-xs text-tertiary">no settled earnings in this period</div>}
+        {view.length > 0 && (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={view} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
             <defs>
@@ -121,6 +127,7 @@ export function EarningsChart({ data = EARNINGS_90D }: { data?: EarningsPoint[] 
             ))}
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </div>
 
       <div className="mt-3 flex items-center gap-4 font-mono text-[11px] text-tertiary">

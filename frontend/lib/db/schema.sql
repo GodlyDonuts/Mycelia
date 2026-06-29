@@ -58,6 +58,15 @@ CREATE TABLE IF NOT EXISTS node_telemetry_current (
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Contributor controls are persisted server-side so dashboard changes survive
+-- navigation and can be consumed by native/browser agents on heartbeat.
+CREATE TABLE IF NOT EXISTS provider_settings (
+  user_id              UUID PRIMARY KEY,
+  contribution_cap_pct INT NOT NULL DEFAULT 80 CHECK (contribution_cap_pct BETWEEN 50 AND 100),
+  only_when_idle       BOOLEAN NOT NULL DEFAULT true,
+  updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS jobs (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_id      UUID,
@@ -207,7 +216,7 @@ CREATE TABLE IF NOT EXISTS cells (
   job_id           UUID NOT NULL,
   round_id         UUID NOT NULL,
   kind             TEXT NOT NULL DEFAULT 'solo' CHECK (kind IN ('solo','pipeline')),
-  member_node_ids  UUID[],
+  member_node_ids  TEXT,            -- assigned member node id(s); TEXT not UUID[] (DSQL has no array types)
   capability_class TEXT,
   data_shard_ref   TEXT,
   status           TEXT NOT NULL DEFAULT 'forming'
