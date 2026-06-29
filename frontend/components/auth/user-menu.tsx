@@ -48,9 +48,14 @@ export function UserMenu() {
         user.role === "provider" ? "bg-primary/10 text-primary" : user.role === "requester" ? "bg-accent/10 text-accent" : "bg-secondary text-muted-foreground")}>
         {user.role}
       </span>
-      <span className="flex size-9 items-center justify-center rounded-full bg-secondary font-mono text-xs font-semibold text-foreground" title={user.name}>
-        {initials}
-      </span>
+      {user.picture ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={user.picture} alt={user.name} title={user.email || user.name} className="size-9 rounded-full border border-border object-cover" referrerPolicy="no-referrer" />
+      ) : (
+        <span className="flex size-9 items-center justify-center rounded-full bg-secondary font-mono text-xs font-semibold text-foreground" title={user.email || user.name}>
+          {initials}
+        </span>
+      )}
       <button onClick={logout} aria-label="Sign out" className="text-muted-foreground transition hover:text-foreground">
         <LogOut className="size-4" />
       </button>
