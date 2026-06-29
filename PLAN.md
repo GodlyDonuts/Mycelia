@@ -2,6 +2,8 @@
 
 > **A shared compute cloud woven from everyday people's idle computers.** Many small nodes, one living compute organism.
 
+> **Scale-to-a-million target:** one million registered requesters and contributors across regional control planes. Every worker interaction is constant-size and pull-based; no operation requires broadcasting to, locking, or synchronizing the full fleet.
+
 **Status:** Greenfield. Canonical repo root **verified** at `/Users/sairamen/projects/Mycelia` (remote `GodlyDonuts/Mycelia`). A nested `Mycelia/Mycelia/.git` exists with only a 10-byte stub README pointing at the **same** remote — it must be collapsed in Phase 0 before any v0 push (see [Roadmap](#10-build-roadmap)). Re-verified directly: both `/Users/sairamen/projects/Mycelia` and the nested `/Users/sairamen/projects/Mycelia/Mycelia` are git repos with the identical `https://github.com/GodlyDonuts/Mycelia.git` remote and 10-byte stub `README.md` files — collapsing the inner `.git` is safe.
 
 **The one decision that defines this plan:** we build the *read path and the proof* for real, and we **stub the async control plane** for the hackathon. Mycelia is a trust-and-economics company that happens to do distributed systems. We ship something genuinely live and scope it ruthlessly.
@@ -31,6 +33,20 @@ Meanwhile, **billions of consumer devices sit 85–90% idle** — hundreds of mi
 **The sustainability wedge.** The defensible, uncontested claim is **no new land, no datacenter construction, no new water-cooling plant, and no new grid interconnect** — Mycelia sidesteps the contested, multi-year, permit-bound costs of hyperscale buildout entirely. We harvest **only otherwise-idle time** and let contributors schedule onto cheap/off-peak/renewable windows, shifting *when* and *where* the incremental draw lands. This is the most defensible, least-contested environmental story in the entire DePIN field.
 
 The thesis is **already proven** (Salad runs 60k+ daily-active consumer GPUs across 191 countries; BOINC/Folding@home ran millions of nodes for two decades, hitting 2.43 exaFLOPS). We do **not** need to prove "consumer compute works." We need to **out-execute on the three genuinely unsolved problems**: verifying untrusted results without doubling cost, protecting job data on a TEE-less host, and paying contributors enough to beat their marginal electricity.
+
+### The million-participant contract
+
+"Scale to a million" means the architecture must remain operational as registered users, online nodes, jobs, and result volume grow independently. It does **not** mean the hackathon laptop or embedded database is represented as a million-concurrent-user benchmark.
+
+1. **No fleet-wide coordination.** A worker pulls one shard, renews one lease, and submits one result. Work is partitioned by job, capability, and region.
+2. **No in-memory authority.** Coordinator instances are disposable; leases, job state, idempotency, and balances are durable.
+3. **No unbounded telemetry table.** Current telemetry is one row per node. At production volume, regional telemetry shards are independent of the strongly consistent ledger.
+4. **No artifact hairpin through the coordinator.** Models, datasets, checkpoints, and outputs move through object storage or direct data paths; the control plane carries references.
+5. **No global failure domain.** Regional ingress, queues, workers, and TURN capacity isolate congestion and node churn.
+6. **No verify-everything-twice tax.** Sampling, reputation, deterministic checks, and dispute-driven referees keep trust cost proportional to risk rather than fleet size.
+7. **No rewrite at the scale boundary.** The local PGlite driver is replaced behind `lib/db/index.ts`; the request contracts, SQL invariants, worker protocol, and workload state machines remain.
+
+Before claiming production readiness, this contract requires measured regional load tests, queue-lag targets, storage hot-key tests, chaos drills, and cost-per-active-node evidence.
 
 ### The metaphor, mapped to the architecture
 

@@ -24,6 +24,35 @@ lib/db/index.ts  ──►  ONE shared PGlite connection (embedded Postgres-in-W
 
 Everything that touches state goes through the single shared connection. The SQL is plain Postgres ([`lib/db/schema.sql`](../frontend/lib/db/schema.sql)) so the entire layer ports to **Aurora DSQL** by replacing only `lib/db/index.ts`.
 
+## Scale model: one million participants
+
+The embedded topology above is the executable proof environment. The production topology targets **one million registered requesters and contributors** by preserving the same API and state-machine contracts while scaling the deployment units independently.
+
+The critical property is that a normal worker action is **O(1) with respect to fleet size**: register one node, heartbeat one bounded record, claim one eligible shard, submit one result, or append one idempotent settlement entry. There is no fleet-wide lock, broadcast, membership consensus, or all-to-all worker mesh in the render/inference/simulation path.
+
+```text
+Regional ingress
+  ├── stateless coordinator replicas
+  ├── partitioned work + settlement queues
+  ├── scheduler / verification worker pools
+  ├── region-sharded ephemeral telemetry
+  └── object storage / direct artifact paths
+               │
+               └── strongly consistent ledger + durable job metadata
+```
+
+| Plane | Scaling rule | Fleet-size containment |
+|---|---|---|
+| API | Add stateless replicas per region | Instances retain no authoritative scheduler state |
+| Work | Partition by job, shard, capability, and region | Workers pull; queues apply backpressure |
+| Telemetry | Latest-state UPSERT locally; regional shards at production volume | Heartbeats never become append-only ledger traffic |
+| Artifacts | Store references in the control plane | Model weights and outputs bypass coordinator memory |
+| Ledger | Serialize only the affected account/job and use idempotency keys | No global balance lock or fleet transaction |
+| Verification | Deterministic checks first, then sampled/refereed escalation | Cost follows disputed risk, not total registered users |
+| Failure | Lease expiry, quorum, and shard reclaim | One node or region cannot stall unrelated work |
+
+The million-user claim is therefore an **architecture target**, not a benchmark result. The local build validates correctness and end-to-end behavior. Production readiness requires load tests at increasing regional concurrency, queue-lag and settlement-latency SLOs, hot-partition tests, chaos/failover exercises, and cost-per-active-node measurement.
+
 ## 2. Data model
 
 Defined in [`frontend/lib/db/schema.sql`](../frontend/lib/db/schema.sql) (mirrors PLAN.md §5). Integrity is enforced in-app within transactions (no FKs), for DSQL parity. Enums are `TEXT + CHECK`.

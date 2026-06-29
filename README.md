@@ -12,10 +12,11 @@
 [![Verify](https://img.shields.io/badge/Verify-Canary%20·%20Refereed%20·%20ZK-d8a25a?style=flat-square)](docs/ZK_VERIFICATION.md)
 [![P2P](https://img.shields.io/badge/P2P-WebRTC%20·%20TURN%20·%20BWE-6fd3b8?style=flat-square)](docs/TRANSPORT_LAYER.md)
 [![Regions](https://img.shields.io/badge/Regions-us%20·%20eu%20·%20apac-d8a25a?style=flat-square)](docs/MULTI_REGION.md)
+[![Scale](https://img.shields.io/badge/Scale-1M%20participants-6fd3b8?style=flat-square)](#scale-to-a-million)
 
 *54 API routes · 17 training modules · 11 workload classes · 2 Rust crates · 4 regions · gRPC · Terraform · K8s · 92 tests*
 
-[Run it](#run-it) · [Architecture](#architecture) · [System diagrams](#system-diagrams) · [Training stack](#the-distributed-training-stack) · [Verification moat](#verification-at-planetary-scale) · [Docs](#documentation)
+[Run it](#run-it) · [Scale to a million](#scale-to-a-million) · [Architecture](#architecture) · [System diagrams](#system-diagrams) · [Training stack](#the-distributed-training-stack) · [Verification moat](#verification-at-planetary-scale) · [Docs](#documentation)
 
 </div>
 
@@ -50,6 +51,28 @@ We are building the world's first **trust-native, economics-first distributed tr
 > *Many small nodes. One living organism. The mycelium doesn't ask permission from the forest floor.*
 
 This repo is the **full stack** — coordinator, ledger, verification moat, P2P transport layer, zk attestation pipeline, native workers in Python and Rust, and the infra to deploy it globally. The hackathon MVP runs locally with zero AWS; every production path is stubbed, documented, and one swap away from live.
+
+---
+
+## Scale to a million
+
+**Mycelia is designed for one million registered participants, not one giant server holding one million open connections.** Workers pull independent shards, stateless coordinators scale horizontally, and durable state lives behind explicit storage boundaries. Adding the millionth participant adds supply; it does not add a peer-to-peer connection to every existing participant or require a global scheduling loop.
+
+The target envelope is **1,000,000 registered requesters and contributors**, with online workers distributed across regions and jobs partitioned into independently claimable tiles or training cells. The production path scales each pressure point separately:
+
+| Million-user pressure | Design response |
+|---|---|
+| Connections and scheduling | Pull-based, sub-second HTTP handlers; no coordinator keeps per-worker session state |
+| Bursty job fan-out | Partitioned queues and regional scheduler workers; backpressure is per job and capability class |
+| Heartbeat volume | Bounded latest-state UPSERTs, then region-sharded telemetry storage when measured load requires it—never an unbounded heartbeat log in the ledger |
+| Money and settlement | Strongly consistent account serialization, append-only idempotent entries, and chunked settlement |
+| Worker churn | Leases, deadlines, quorum, and shard reclamation; one disappearing laptop affects one shard, not the fleet |
+| Verification cost | Reputation-weighted sampling and refereed recompute; verification does not require rerunning every result on every node |
+| Large artifacts | Object-storage references and P2P data paths; the control plane moves metadata, not model weights or render payloads |
+
+The local PGlite build proves the protocol and invariants; it is **not** presented as the million-user database. The production topology replaces that local driver with regional stateless coordinators, queues, scheduler/verification workers, object storage, and Aurora DSQL at the existing `lib/db/index.ts` boundary. Those are independently scalable deployment units, so reaching one million is an infrastructure expansion rather than an application rewrite.
+
+**Scale claim:** architecture-ready for a million participants; locally proven end to end; production capacity remains subject to regional load, failure, and cost testing. That distinction is deliberate.
 
 ---
 

@@ -26,9 +26,9 @@ Do not reset or restart the server immediately before presenting; that discards 
 
 **Say:**
 
-> AI needs an extraordinary amount of compute. Our default answer has been to build larger and larger datacenters—concentrating land, power, cooling, and capital in facilities that communities increasingly do not want in their backyards.
+> AI needs extraordinary compute. Our default answer is ever-larger datacenters—concentrating land, power, cooling, and capital in facilities communities increasingly reject.
 >
-> But at the same time, millions of capable GPUs and CPUs in homes and offices sit idle for most of the day. Mycelia turns that stranded capacity into a shared compute cloud: no new silicon, no new megastructure—just the machines we already own, woven into one network.
+> Meanwhile, millions of capable GPUs and CPUs sit idle for most of the day. Mycelia turns that stranded capacity into a shared cloud. Our goal is one million participants whose machines add capacity instead of requiring another megadatacenter.
 
 **Action at 0:28:** Scroll just enough to reveal the live stats band.
 
@@ -72,7 +72,7 @@ Click the arrow button. As the structured form fills, continue:
 
 **Say:**
 
-> The other side is supply. Any ordinary machine can become a contributor—a cultivator in the Mycelia network.
+> The other side is supply. Any ordinary machine can become a contributor—a cultivator in the Mycelia network. Workers pull independent shards through stateless endpoints, so the millionth user adds compute instead of one more permanent connection to a central scheduler.
 
 **Action:** Click **Join the mesh**.
 
@@ -88,7 +88,7 @@ If the consent panel appears, check the consent box and click **Agree & join** w
 
 **Point to the graph and live render:**
 
-> The graph is the active mesh. On the right, independently computed tiles are being checked and reassembled into one output. This is not a video or a front-end animation—the pixels come back through the same job and settlement path a real worker uses.
+> This is the active mesh. Independently computed tiles are checked and reassembled on the right. It is not a video—the pixels return through the same job and settlement path a real worker uses.
 
 ---
 
@@ -98,7 +98,7 @@ If the consent panel appears, check the consent box and click **Agree & join** w
 
 **Say:**
 
-> Rendering is the easiest workload to see, but the same model applies to AI. Here, independent machines are fine-tuning a LoRA adapter. They train locally and exchange small adapter updates instead of synchronizing an entire model every step.
+> Rendering is easiest to see, but the model also applies to AI. These machines fine-tune a LoRA adapter locally, exchanging small updates instead of synchronizing the entire model every step.
 
 **Point to:** Falling validation loss, contribution bars, communication footer, and any “delta rejected” badge.
 
@@ -138,7 +138,7 @@ If the consent panel appears, check the consent box and click **Agree & join** w
 
 > And this closes the loop. The requester funds escrow, useful work is verified, contributors are paid, and the platform fee is recorded in an append-only ledger. Every number on this screen comes from that live transaction path.
 >
-> Datacenters will still exist. But we should not pour concrete for every burst of parallel compute while enormous capacity is already sitting unused around us. Mycelia makes that capacity discoverable, trustworthy, and economically useful—many small machines, one living compute cloud.
+> Datacenters will still exist. But we should not pour concrete for every parallel workload while enormous capacity sits unused. Mycelia lets one million people make that capacity discoverable, trustworthy, and useful—many small machines, one living compute cloud.
 
 **Final action:** Stop moving the mouse. End on the ledger with the live MYC balance visible.
 
@@ -171,5 +171,6 @@ Use one sentence and move on; never debug on stage.
 - Speak at approximately 125–135 words per minute. The spoken script is intentionally about 520 words.
 - Pause after “communities increasingly do not want in their backyards” and after the final sentence.
 - Do not call the system “decentralized AWS” or claim it replaces hyperscale pretraining.
+- Say “designed for one million participants,” not “currently serving one million users.” The scale path is concrete; the million-user load test is future validation.
 - Do not explain PGlite unless asked. If asked: “The demo uses embedded Postgres; the data-access boundary is designed to swap to Aurora DSQL without changing coordinator logic.”
 - If asked whether the fleet is real: “The browser I joined is real. The local demo also includes a deterministic seeded fleet so the marketplace remains active without external infrastructure.”

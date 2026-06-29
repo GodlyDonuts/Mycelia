@@ -15,7 +15,7 @@ Open `http://localhost:3000`. The in-memory DB migrates + seeds on the first req
 
 ## The beats
 
-1. **Hook (landing, `/`)** — "AI's compute appetite vs. physical limits. Mycelia grows a datacenter from the machines we already have." The hero stats band is live (`/api/stats`).
+1. **Hook (landing, `/`)** — "What if the next million compute users added capacity instead of requiring another datacenter? Mycelia grows a shared cloud from the machines we already have." The hero stats band is live (`/api/stats`). Describe the system as **designed for one million participants**; do not imply the local demo has already load-tested one million concurrent users.
 
 2. **The marketplace (`/marketplace`)** — point at the live **supply vs demand** band. Type one plain-English sentence into *Describe your job* — e.g. *"render a 4K deep zoom into the seahorse valley, under two minutes, keep it cheap"* — and watch a schema-valid job stream into the form (Claude Opus 4.8 structured output with `ANTHROPIC_API_KEY`, deterministic fallback otherwise). Click **Submit job**: escrow is debited atomically and the job fans out → *"Escrow funded · job … fanned out to the mesh."*
 

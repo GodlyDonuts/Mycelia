@@ -12,13 +12,13 @@ Copy each section into the matching Devpost field. Written to be **human-compell
 
 ## Tagline / elevator pitch (≤256 chars)
 
-**Train AI on the world's idle GPUs.** A live marketplace + distributed LoRA training stack with escrow, WebGPU workers, DiLoCo sync, and a verification moat — not a mock.
+**One million people, one shared compute cloud.** Mycelia turns idle consumer GPUs into a verified marketplace for rendering, inference, simulation, and distributed AI training.
 
 ---
 
 ## Video demo script hook (first 10 seconds)
 
-*"Hyperscalers spend billions on datacenters. We built a datacenter from browser tabs — and it actually trains models, pays contributors, and catches cheaters."*
+*"What if the next million compute users added capacity instead of another datacenter? Mycelia turns their idle machines into one verified cloud—and it already trains, pays, and catches cheaters."*
 
 ---
 
@@ -52,6 +52,8 @@ Training makes this brutal. A fake render tile wastes pixels. A **poisoned gradi
 
 **Mycelia is that stack.**
 
+It is also built around a specific scale thesis: **the millionth participant should add compute, not coordinator load proportional to the rest of the network.** Workers pull independent shards through stateless handlers; they do not form an all-to-all mesh or wait behind a global scheduler. Financial truth remains strongly consistent, while telemetry, queues, verification, and artifacts scale as separate regional planes.
+
 ---
 
 ### What Mycelia is
@@ -74,6 +76,20 @@ The name is deliberate. A mycelium network is the largest organism on earth: bil
 > *Many small nodes. One living organism.*
 
 This is not a GPU rental listing. This is not a blockchain whitepaper. This is a **production-shaped distributed systems product** with a live coordinator, a real ledger, real WebGPU kernels executing in your browser, and a distributed training loop where the validation loss actually drops.
+
+### Why it scales to a million participants
+
+Our million-user target is **one million registered requesters and contributors distributed across regions**, not one million WebSockets attached to one process. The architecture removes fleet size from the critical request path:
+
+- **Pull, do not push:** each worker performs a constant-size claim, heartbeat, and result submission; no central service fans a message directly to every device.
+- **Stateless coordinators:** API instances hold no scheduler state and can scale horizontally behind regional ingress.
+- **Partitioned work:** renders, simulations, inference batches, and training rounds become independent tiles or cells; jobs scale across workers without a global barrier.
+- **Bounded telemetry:** one current-state record per node avoids an append-only heartbeat explosion; high-frequency telemetry can shard by region without touching the financial ledger.
+- **Separate money from motion:** the append-only ledger and account serialization remain strongly consistent, while queues, artifacts, and telemetry scale independently.
+- **Sublinear trust:** reputation-weighted sampling and refereed recompute avoid duplicating every unit of work merely because the fleet grew.
+- **Churn containment:** leases, quorum, and shard reclamation make a failed laptop a local retry rather than a global incident.
+
+The live PGlite demo proves the coordinator protocol, verification, and ledger invariants. The million-user deployment replaces the local driver with regional queues and scheduler/verification workers and swaps the database driver at the existing Aurora DSQL boundary. We claim a **production-shaped scale path**, not a million-user load test we have not run.
 
 ---
 
