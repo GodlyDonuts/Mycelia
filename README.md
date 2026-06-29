@@ -711,83 +711,139 @@ Core Postgres schema — jobs fan out to tiles; training rounds fan out to contr
 
 ```mermaid
 erDiagram
-    ACCOUNTS ||--o{ LEDGER_ENTRIES : posts
-    ACCOUNTS ||--|| ACCOUNT_BALANCE : serializes
-    ACCOUNTS ||--o{ JOBS : submits
+    USERS ||--|| ACCOUNT_BALANCE : owns
+    USERS ||--o{ JOBS : submits
+    USERS ||--o{ TRAINING_JOBS : requests
+    USERS ||--o{ LEDGER_ENTRIES : posts
+
     JOBS ||--|{ TILES : fans_out
-    TILES }o--|| NODES : claimed_by
-    NODES ||--o{ HEARTBEATS : emits
-    NODES }o--o{ CELL_MEMBERS : belongs_to
+    TILES ||--o{ TILE_RESULTS : receives
+    NODES ||--o{ TILES : claims
+    NODES ||--o{ TILE_RESULTS : submits
+    NODES ||--|| NODE_TELEMETRY : reports
 
     TRAINING_JOBS ||--|{ TRAINING_ROUNDS : contains
+    TRAINING_ROUNDS ||--o{ CELLS : assigns
     TRAINING_ROUNDS ||--o{ CONTRIBUTIONS : collects
-    CONTRIBUTIONS }o--|| NODES : submitted_by
-    TRAINING_JOBS ||--|| ADAPTERS : tracks_theta
+    NODES ||--o{ CONTRIBUTIONS : submits
+    NODES ||--o{ CELLS : joins
 
-    JOBS {
-        uuid id PK
-        text status
-        numeric escrow_amount
-        jsonb jobspec
-        timestamptz deadline
-    }
+    JOBS ||--o{ LEDGER_ENTRIES : escrow_for
+    TRAINING_JOBS ||--o{ LEDGER_ENTRIES : escrow_for
 
-    TILES {
-        uuid id PK
-        uuid job_id FK
-        int tile_x tile_y
-        text status
-        uuid node_id FK
-        text result_hash
-    }
-
-    LEDGER_ENTRIES {
-        bigserial id PK
-        uuid account_id FK
-        text kind
-        numeric amount
-        uuid ref_id
-        timestamptz at
+    USERS {
+        string id PK
+        string email
+        string role
+        number reputation
+        string region
     }
 
     ACCOUNT_BALANCE {
-        uuid account_id PK
-        numeric available
-        numeric escrow
-        int version
+        string account_id PK
+        number available_myc
+        number reserved_myc
+        datetime updated_at
+    }
+
+    JOBS {
+        string id PK
+        string requester_id FK
+        string name
+        string type
+        string status
+        number reward_bid_myc
+        number total_tiles
+        datetime deadline_at
+    }
+
+    TILES {
+        string id PK
+        string job_id FK
+        int tile_index
+        string status
+        string assigned_node_id FK
+        string result_hash
+        datetime deadline_at
+    }
+
+    TILE_RESULTS {
+        string id PK
+        string tile_id FK
+        string node_id FK
+        string result_hash
+        string vote_status
+        datetime submitted_at
+    }
+
+    LEDGER_ENTRIES {
+        string id PK
+        string account_id FK
+        string job_id FK
+        number amount_myc
+        string entry_type
+        string idempotency_key
+        datetime created_at
     }
 
     NODES {
-        uuid id PK
-        text name
-        text gpu_model
-        text region
-        float reputation
-        numeric stake
+        string id PK
+        string display_name
+        string status
+        string gpu_model
+        string region
+        number reputation
+        number stake_myc
+        datetime last_heartbeat_at
+    }
+
+    NODE_TELEMETRY {
+        string node_id PK
+        number cpu_pct
+        number gpu_pct
+        number throughput_mbps
+        datetime updated_at
+    }
+
+    TRAINING_JOBS {
+        string id PK
+        string requester_id FK
+        string base_model_ref
+        string dataset_ref
+        int h_local_steps
+        number val_loss
+        string status
+        number reward_bid_myc
     }
 
     TRAINING_ROUNDS {
-        uuid id PK
-        int round_num
-        bytea adapter_snapshot
-        float val_loss
-        text status
+        string id PK
+        string job_id FK
+        int round_index
+        string adapter_ref_in
+        string adapter_ref_out
+        number val_loss
+        string status
+    }
+
+    CELLS {
+        string id PK
+        string job_id FK
+        string round_id FK
+        string kind
+        string data_shard_ref
+        string status
     }
 
     CONTRIBUTIONS {
-        uuid id PK
-        uuid round_id FK
-        uuid node_id FK
-        bytea delta_compressed
-        float loss_before loss_after
-        bool accepted
-    }
-
-    CELL_MEMBERS {
-        uuid node_id FK
-        text cell_id
-        int stage_index
-        text health
+        string id PK
+        string round_id FK
+        string node_id FK
+        string delta_ref
+        number canary_loss_delta
+        boolean accepted
+        number reward_myc
+        string vote_status
     }
 ```
 
