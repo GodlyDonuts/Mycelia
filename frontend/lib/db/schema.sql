@@ -207,7 +207,7 @@ CREATE TABLE IF NOT EXISTS cells (
   job_id           UUID NOT NULL,
   round_id         UUID NOT NULL,
   kind             TEXT NOT NULL DEFAULT 'solo' CHECK (kind IN ('solo','pipeline')),
-  member_node_ids  UUID[],
+  member_node_ids  TEXT,            -- assigned member node id(s); TEXT not UUID[] (DSQL has no array types)
   capability_class TEXT,
   data_shard_ref   TEXT,
   status           TEXT NOT NULL DEFAULT 'forming'

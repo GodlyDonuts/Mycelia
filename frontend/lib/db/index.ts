@@ -1,66 +1,93 @@
-// Mycelia data-access layer.
+// Mycelia data-access layer — THE ONLY DB SEAM.
 //
-// One shared connection for the whole process (PLAN.md §4 "ONE shared pooled
-// connection" discipline). Today the driver is local PGlite (embedded Postgres
-// in WASM — no install, no cloud); because the SQL is plain Postgres it swaps
-// for the first-party Aurora DSQL connector by replacing only this file.
+// One shared, single connection for the whole process (PLAN.md §4). The backend
+// is selected by MYCELIA_DB_DRIVER:
 //
-// The singleton is parked on globalThis so Next's dev HMR reuses it instead of
-// opening a second instance per module reload.
+//   (unset) | pglite  → embedded Postgres-in-WASM (default; local/dev/test)
+//   dsql              → Aurora DSQL  (IAM token + RDS CA TLS + keep-alive + 40001 retry)
+//   postgres          → Aurora PostgreSQL / RDS / any DATABASE_URL
+//
+// The SQL/transactions/OCC-retry are identical across backends — swapping the
+// driver is the entire "now it's on AWS" move, and nothing outside lib/db knows
+// which backend is live. If a cloud backend can't connect, we fall back to PGlite
+// so a demo never hard-fails (the fallback is surfaced on the Cloud console).
 
-import { PGlite } from "@electric-sql/pglite"
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import type { Backend, Tx, Sql, Params } from "./types"
+import { recordQuery, markFallback, markRetry40001, getDbStatus } from "./status"
 
-type Sql = string
-type Params = unknown[]
-
-interface MyceliaDb {
-  pg: PGlite
-  ready: Promise<void>
-}
+export type { Tx } from "./types"
+export { getDbStatus } from "./status"
+export type { DbStatus } from "./status"
 
 declare global {
   // eslint-disable-next-line no-var
-  var __mycelia_db: MyceliaDb | undefined
+  var __mycelia_backend: Promise<Backend> | undefined
 }
 
-function loadSchema(): string {
-  // Read from disk (dev). Path is stable relative to the Next working dir.
-  return readFileSync(join(process.cwd(), "lib", "db", "schema.sql"), "utf8")
-}
-
-async function bootstrap(pg: PGlite): Promise<void> {
-  await pg.exec(loadSchema())
-  // Seed only if the mesh is empty so a server restart paints a populated app.
-  const { rows } = await pg.query<{ n: number }>("SELECT count(*)::int AS n FROM nodes")
-  if (rows[0].n === 0) {
-    const { seed } = await import("./seed")
-    await seed(pg)
+// node-postgres connection failures on dual-stack localhost surface as an
+// AggregateError with an empty top-level message and the real ECONNREFUSED in
+// `.errors[]`; auth failures carry the cause in `.code`. Dig out something useful.
+function describeError(err: unknown): string {
+  if (err == null) return "unknown error"
+  const e = err as { message?: string; code?: string; errors?: Array<{ message?: string; code?: string }> }
+  if (Array.isArray(e.errors) && e.errors.length) {
+    const parts = e.errors.map((x) => x?.message || x?.code).filter(Boolean)
+    if (parts.length) return parts.join("; ")
   }
+  if (e.message) return e.code ? `${e.message} (${e.code})` : e.message
+  if (e.code) return String(e.code)
+  return String(err)
 }
 
-function init(): MyceliaDb {
-  if (globalThis.__mycelia_db) return globalThis.__mycelia_db
-  const dir = process.env.MYCELIA_DB_DIR // optional persistence; defaults to in-memory
-  const pg = dir ? new PGlite(dir) : new PGlite()
-  const db: MyceliaDb = { pg, ready: bootstrap(pg) }
-  globalThis.__mycelia_db = db
-  return db
+async function resolveBackend(): Promise<Backend> {
+  const driver = (process.env.MYCELIA_DB_DRIVER ?? "pglite").toLowerCase()
+
+  if (driver === "dsql" || driver === "postgres") {
+    try {
+      const { createSqlBackend } = await import("./sql")
+      const b = await createSqlBackend(driver)
+      await b.ready
+      return b
+    } catch (err) {
+      // Don't let a cloud hiccup kill the app — degrade to embedded Postgres and
+      // record why, so the Cloud console can show the fallback honestly.
+      const reason = describeError(err)
+      markFallback(driver, reason)
+      console.error(`[mycelia] ${driver} backend unavailable, falling back to PGlite: ${reason}`)
+      const { createPgliteBackend } = await import("./pglite")
+      const b = createPgliteBackend()
+      await b.ready
+      return b
+    }
+  }
+
+  const { createPgliteBackend } = await import("./pglite")
+  const b = createPgliteBackend()
+  await b.ready
+  return b
 }
 
-/** Returns the shared PGlite instance, guaranteed migrated + seeded. */
-export async function getDb(): Promise<PGlite> {
-  const db = init()
-  await db.ready
-  return db.pg
+function backend(): Promise<Backend> {
+  return (globalThis.__mycelia_backend ??= resolveBackend())
 }
+
+/** Returns the shared underlying connection handle, guaranteed migrated +
+ *  (if empty) seeded. Callers only await it; the concrete type varies by backend. */
+export async function getDb(): Promise<unknown> {
+  return (await backend()).handle
+}
+
+const t0 = () => (typeof performance !== "undefined" ? performance.now() : Date.now())
 
 /** Convenience query that returns typed rows. */
 export async function query<T = Record<string, unknown>>(sql: Sql, params: Params = []): Promise<T[]> {
-  const pg = await getDb()
-  const res = await pg.query<T>(sql, params)
-  return res.rows
+  const b = await backend()
+  const start = t0()
+  try {
+    return await b.query<T>(sql, params)
+  } finally {
+    recordQuery(t0() - start)
+  }
 }
 
 /** Single-row helper (or null). */
@@ -70,51 +97,44 @@ export async function queryOne<T = Record<string, unknown>>(sql: Sql, params: Pa
 }
 
 /**
- * Run fn inside a transaction. On Aurora DSQL this is where the mandatory
- * SQLSTATE 40001 retry-with-backoff lives (PLAN.md §4); PGlite is
- * single-writer so it never raises 40001, but we keep the retry wrapper so the
- * contract is identical when the driver is swapped.
+ * Run fn inside a transaction with the mandatory SQLSTATE 40001 retry-with-
+ * backoff (PLAN.md §4). Each backend.withTx is ONE attempt; the retry lives here
+ * so the contract is identical across drivers. PGlite is single-writer and never
+ * raises 40001 on its own, but the wrapper still honors an injected conflict so
+ * the swap to a real OCC backend changes nothing for callers.
  */
 export async function withTx<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
-  const pg = await getDb()
+  const b = await backend()
+  const start = t0()
   const MAX = 5
   let lastErr: unknown
-  for (let attempt = 0; attempt < MAX; attempt++) {
-    try {
-      return await pg.transaction(async (t) => fn(wrapTx(t)))
-    } catch (err: unknown) {
-      lastErr = err
-      const code = (err as { code?: string })?.code
-      if (code === "40001") {
-        await new Promise((r) => setTimeout(r, 25 * (attempt + 1) + Math.floor(attempt * attempt)))
-        continue
+  try {
+    for (let attempt = 0; attempt < MAX; attempt++) {
+      try {
+        return await b.withTx(fn)
+      } catch (err: unknown) {
+        lastErr = err
+        if ((err as { code?: string })?.code === "40001" && attempt < MAX - 1) {
+          markRetry40001()
+          await new Promise((r) => setTimeout(r, 25 * (attempt + 1) + attempt * attempt))
+          continue
+        }
+        throw err
       }
-      throw err
     }
-  }
-  throw lastErr
-}
-
-export interface Tx {
-  query<T = Record<string, unknown>>(sql: Sql, params?: Params): Promise<T[]>
-  queryOne<T = Record<string, unknown>>(sql: Sql, params?: Params): Promise<T | null>
-}
-
-function wrapTx(t: { query: PGlite["query"] }): Tx {
-  return {
-    async query<T>(sql: Sql, params: Params = []) {
-      const res = await t.query<T>(sql, params)
-      return res.rows
-    },
-    async queryOne<T>(sql: Sql, params: Params = []) {
-      const res = await t.query<T>(sql, params)
-      return (res.rows[0] as T) ?? null
-    },
+    throw lastErr
+  } finally {
+    recordQuery(t0() - start, true)
   }
 }
 
-/** Number coercion — PGlite returns NUMERIC columns as strings. */
+/** Number coercion — Postgres returns NUMERIC columns as strings. */
 export function num(v: unknown): number {
   if (v === null || v === undefined) return 0
   return typeof v === "number" ? v : Number(v)
+}
+
+/** True once the active backend is a managed cloud database. */
+export function isCloud(): boolean {
+  return getDbStatus().cloud
 }

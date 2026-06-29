@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://mycelia.dev/schemas/cell-topology.v1.json",
+  "title": "MyceliaCellTopology",
+  "type": "object",
+  "required": ["cellId", "regime", "members"],
+  "properties": {
+    "cellId": { "type": "string" },
+    "regime": { "enum": ["regime-1", "regime-2-pipeline", "regime-2-tensor"] },
+    "modelParamsB": { "type": "number" },
+    "members": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["nodeId", "stageIndex"],
+        "properties": {
+          "nodeId": { "type": "string" },
+          "stageIndex": { "type": "integer", "minimum": 0 },
+          "tensorShardIndex": { "type": "integer", "minimum": 0 },
+          "region": { "type": "string" },
+          "gpuModel": { "type": "string" },
+          "vramGb": { "type": "number" }
+        }
+      }
+    },
+    "pipelineLinks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": { "type": "integer" },
+          "to": { "type": "integer" },
+          "transport": { "enum": ["webrtc-dc", "relay", "lan-nccl"] }
+        }
+      }
+    }
+  }
+}

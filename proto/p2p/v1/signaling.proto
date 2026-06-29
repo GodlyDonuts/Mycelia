@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package mycelia.p2p.v1;
+
+option go_package = "github.com/mycelia/proto/p2p/v1";
+
+// WebRTC signaling messages exchanged via coordinator WebSocket.
+
+message SignalingMessage {
+  oneof payload {
+    Offer offer = 1;
+    Answer answer = 2;
+    IceCandidate ice_candidate = 3;
+    SessionClose close = 4;
+  }
+}
+
+message Offer {
+  string session_id = 1;
+  string from_node = 2;
+  string to_node = 3;
+  string sdp = 4;
+}
+
+message Answer {
+  string session_id = 1;
+  string sdp = 2;
+}
+
+message IceCandidate {
+  string session_id = 1;
+  string candidate = 2;
+  string sdp_mid = 3;
+  int32 sdp_mline_index = 4;
+}
+
+message SessionClose {
+  string session_id = 1;
+  string reason = 2;
+}
+
+message MeshTopology {
+  string cell_id = 1;
+  repeated PipelineLink links = 2;
+}
+
+message PipelineLink {
+  string from_node = 1;
+  string to_node = 2;
+  int32 stage_from = 3;
+  int32 stage_to = 4;
+}

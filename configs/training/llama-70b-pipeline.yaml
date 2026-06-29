@@ -1,0 +1,51 @@
+# Llama 3.1 70B — pipeline-parallel cell (Regime 2)
+# 4 pipeline stages across co-located high-bandwidth nodes
+
+modelId: meta-llama/Llama-3.1-70B
+
+dataset:
+  uri: s3://mycelia-datasets/demo/sharegpt-lite
+  format: jsonl
+  sampleCount: 12000
+
+lora:
+  rank: 8
+  alpha: 16
+  targets: [q_proj, v_proj]
+  dropout: 0.05
+
+cells:
+  regime: pipeline-parallel
+  count: 2
+  stagesPerCell: 4
+  tensorParallel: 1
+
+pipeline:
+  stageLayout:
+    - layers: [0, 19]
+      minVramGb: 20
+    - layers: [20, 39]
+      minVramGb: 20
+    - layers: [40, 59]
+      minVramGb: 20
+    - layers: [60, 79]
+      minVramGb: 20
+  microBatchSize: 1
+  activationDtype: fp16
+  fallbackDtype: int8
+
+diloco:
+  H: 50
+  outerLr: 0.5
+  compressionK: 0.01
+
+verification:
+  mode: refereed
+  canaryFraction: 0.1
+
+transport:
+  mode: webrtc-dc
+  turnRegion: us-east-1
+  maxRttMs: 10
+
+regions: [us-east-1]
