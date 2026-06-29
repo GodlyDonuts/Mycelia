@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mycelia-coordinator
+  namespace: mycelia
+  labels:
+    app: coordinator
+    tier: control-plane
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: coordinator
+  template:
+    metadata:
+      labels:
+        app: coordinator
+    spec:
+      containers:
+        - name: coordinator
+          image: mycelia/coordinator:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: MYCELIA_DB_DIR
+              value: /data/pglite
+            - name: DSQL_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: mycelia-dsql
+                  key: endpoint
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              cpu: "4"
+              memory: 8Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mycelia-coordinator
+  namespace: mycelia
+spec:
+  selector:
+    app: coordinator
+  ports:
+    - port: 80
+      targetPort: 3000
+  type: LoadBalancer

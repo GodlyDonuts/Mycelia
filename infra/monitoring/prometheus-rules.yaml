@@ -1,0 +1,33 @@
+groups:
+  - name: mycelia-training
+    rules:
+      - alert: TrainingRoundStalled
+        expr: mycelia_training_round_duration_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Training round {{ $labels.round_id }} stalled >10m"
+
+      - alert: CellQuorumLost
+        expr: mycelia_cell_healthy_members / mycelia_cell_total_members < 0.5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cell {{ $labels.cell_id }} lost quorum"
+
+      - alert: P2PRelayHighLatency
+        expr: mycelia_p2p_rtt_ms > 200
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P2P relay RTT elevated in {{ $labels.region }}"
+
+      - alert: ZkProofVerificationFailed
+        expr: increase(mycelia_zk_verify_failures_total[5m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "SP1 proof verification failures detected"
