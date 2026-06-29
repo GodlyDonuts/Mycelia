@@ -1,7 +1,7 @@
 "use client"
 
-// Firebase client — real identity for the demo. Google + email/password sign-in
-// happen here in the browser; the resulting Firebase ID token is sent to
+// Firebase client — real identity for the demo. Email/password sign-in happens
+// here in the browser; the resulting Firebase ID token is sent to
 // /api/auth/login, verified server-side (lib/firebase-verify.ts), and exchanged
 // for the existing HMAC session cookie that carries the app role. So Firebase is
 // the identity layer and the role/economics model underneath is unchanged.
@@ -11,7 +11,7 @@
 // expected. NEXT_PUBLIC_* env vars override it for other projects/deploys.
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app"
-import { getAuth, GoogleAuthProvider, type Auth } from "firebase/auth"
+import { getAuth, type Auth } from "firebase/auth"
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCCiK14HI1qvypVtM_VO7CDmgYDblyIy-o",
@@ -28,7 +28,6 @@ export const FIREBASE_PROJECT_ID = firebaseConfig.projectId
 
 export const firebaseApp: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig)
 export const auth: Auth = getAuth(firebaseApp)
-export const googleProvider = new GoogleAuthProvider()
 
 /** Analytics is browser-only and optional; never let it break SSR or sign-in. */
 export async function initAnalytics(): Promise<void> {

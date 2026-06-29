@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { AppShell } from "@/components/dashboard/app-shell"
 import { JobBoard } from "@/components/marketplace/job-board"
-import { SubmitJob } from "@/components/marketplace/submit-job"
+import { SubmitPane } from "@/components/marketplace/submit-pane"
 import { MarketBand } from "@/components/marketplace/market-band"
 
 export const metadata: Metadata = {
@@ -19,8 +19,8 @@ export default function MarketplacePage() {
             Put the living network to work
           </h1>
           <p className="mt-1 text-pretty text-sm text-muted-foreground">
-            Claim a job from the board, or describe what you need in plain English and let Mycelia shape it into a
-            runnable spec.
+            Drop a Jupyter notebook to fine-tune across the mesh, claim a job from the board, or describe what you need
+            in plain English and let Mycelia shape it into a runnable spec.
           </p>
         </div>
 
@@ -37,7 +37,7 @@ export default function MarketplacePage() {
           {/* RIGHT — submit a job (sticky on large screens) */}
           <div className="order-1 lg:order-2">
             <div className="lg:sticky lg:top-20">
-              <SubmitJob />
+              <SubmitPane />
             </div>
           </div>
         </div>

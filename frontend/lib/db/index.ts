@@ -106,7 +106,11 @@ export async function queryOne<T = Record<string, unknown>>(sql: Sql, params: Pa
 export async function withTx<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
   const b = await backend()
   const start = t0()
-  const MAX = 5
+  // DSQL's OCC raises 40001 on write conflicts; under real contention (hot rows
+  // like the shared platform/escrow balances) a few conflicts per commit are
+  // normal, so retry generously with exponential backoff + jitter. PGlite is
+  // single-writer and never reaches the retry, so this only costs on the wire.
+  const MAX = 12
   let lastErr: unknown
   try {
     for (let attempt = 0; attempt < MAX; attempt++) {
@@ -116,7 +120,8 @@ export async function withTx<T>(fn: (tx: Tx) => Promise<T>): Promise<T> {
         lastErr = err
         if ((err as { code?: string })?.code === "40001" && attempt < MAX - 1) {
           markRetry40001()
-          await new Promise((r) => setTimeout(r, 25 * (attempt + 1) + attempt * attempt))
+          const backoff = Math.min(400, 15 * 2 ** attempt) + Math.floor(Math.random() * 25)
+          await new Promise((r) => setTimeout(r, backoff))
           continue
         }
         throw err

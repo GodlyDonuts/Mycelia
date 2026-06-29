@@ -6,6 +6,13 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["-C", "frontend", "dev"],
       "port": 3000
+    },
+    {
+      "name": "mycelia-demo",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["-C", "frontend", "dev"],
+      "port": 3000,
+      "env": { "MYCELIA_DB_DRIVER": "pglite" }
     }
   ]
 }
