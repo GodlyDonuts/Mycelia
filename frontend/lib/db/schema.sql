@@ -58,6 +58,15 @@ CREATE TABLE IF NOT EXISTS node_telemetry_current (
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Contributor controls are persisted server-side so dashboard changes survive
+-- navigation and can be consumed by native/browser agents on heartbeat.
+CREATE TABLE IF NOT EXISTS provider_settings (
+  user_id              UUID PRIMARY KEY,
+  contribution_cap_pct INT NOT NULL DEFAULT 80 CHECK (contribution_cap_pct BETWEEN 50 AND 100),
+  only_when_idle       BOOLEAN NOT NULL DEFAULT true,
+  updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS jobs (
   id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   requester_id      UUID,

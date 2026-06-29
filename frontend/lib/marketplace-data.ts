@@ -1,10 +1,8 @@
-// Typed mock data + domain types for the Requester-facing Marketplace.
-//
-// Everything here is realistic placeholder data. In production:
+// Shared marketplace domain types, form metadata, and deterministic pricing.
 //   - JobListing items are streamed from the scheduler's job board feed.
 //   - The natural-language intake on the right posts the raw prompt to a
 //     Claude structured-output endpoint that returns a validated JobSpec
-//     (see parseJobFromPrompt() — currently mocked).
+//     (see /api/jobs/parse; deterministic parsing is the no-key fallback).
 //   - Cost/time estimates come from the pricing oracle keyed on GPU tier,
 //     VRAM/RAM, runtime, and replication factor.
 
@@ -201,7 +199,7 @@ export const JOB_LISTINGS: JobListing[] = [
   },
 ]
 
-// ---- Pricing oracle (mock) ----------------------------------------------
+// ---- Local pricing model ------------------------------------------------
 
 const TIER_RATE: Record<GpuTier, number> = {
   none: 0.4,
@@ -224,9 +222,8 @@ export type CostEstimate = {
 }
 
 /**
- * Mock pricing oracle. In production this is a server call that factors in
- * current network supply/demand, node availability for the tier, and the
- * replication factor.
+ * Deterministic resource estimate. The market API supplies current network
+ * pressure separately; this model explains the resource-side baseline.
  */
 export function estimateCost(input: {
   gpuTier: GpuTier
@@ -249,7 +246,7 @@ export function estimateCost(input: {
   }
 }
 
-// ---- Natural-language intake (mocked Claude structured output) ----------
+// ---- Natural-language intake deterministic fallback ---------------------
 
 export type JobFormState = {
   name: string
@@ -285,14 +282,13 @@ export const EXAMPLE_PROMPTS: string[] = [
 ]
 
 /**
- * MOCK of the Claude structured-output endpoint.
- *
- * In production: POST { prompt } to /api/jobs/parse, which calls Claude with a
+ * No-key fallback for the structured-output endpoint.
+ * POST { prompt } to /api/jobs/parse calls Claude with a
  * JSON schema (generateObject) and returns a *validated* JobSpec. The model
  * maps plain English → typed fields, infers a sensible GPU tier, and proposes
  * a reward bid that respects any budget mentioned in the prompt.
  *
- * Here we pattern-match a few keywords so the demo fills believably.
+ * Without an API key, this pattern matcher produces a schema-valid spec.
  */
 export function parseJobFromPrompt(prompt: string): JobFormState {
   const p = prompt.toLowerCase()

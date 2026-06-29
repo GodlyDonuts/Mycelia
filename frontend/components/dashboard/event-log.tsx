@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { LogIn, LogOut, Cpu, CircleCheck, Coins, Activity } from "lucide-react"
-import { EVENT_LOG, type EventLogEntry } from "@/lib/dashboard-data"
+import type { EventLogEntry } from "@/lib/dashboard-data"
 import { usePoll } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -53,12 +53,10 @@ function EventRow({ e, mounted }: { e: EventLogEntry; mounted: boolean }) {
 
 type DashboardPayload = { events: EventLogEntry[] }
 
-export function EventLog({ initial = EVENT_LOG }: { initial?: EventLogEntry[] }) {
+export function EventLog() {
   const [mounted, setMounted] = useState(false)
-  // LIVE FEED: events stream from the read API, newest-first. Fall back to the
-  // mock log until the first frame arrives so SSR + first paint render.
-  const { data } = usePoll<DashboardPayload>("/api/dashboard", 2000)
-  const events = (data?.events ?? initial).slice(0, 40)
+  const { data, error } = usePoll<DashboardPayload>("/api/dashboard", 2000)
+  const events = (data?.events ?? []).slice(0, 40)
 
   useEffect(() => {
     setMounted(true)
@@ -74,6 +72,8 @@ export function EventLog({ initial = EVENT_LOG }: { initial?: EventLogEntry[] })
         </span>
       </div>
       <ul className="-mr-1 flex-1 divide-y divide-border overflow-y-auto pr-1" style={{ maxHeight: "22rem" }}>
+        {!data && !error && <li className="py-8 text-center font-mono text-[11px] text-tertiary">loading activity…</li>}
+        {error && <li className="py-8 text-center font-mono text-[11px] text-destructive">activity feed unavailable</li>}
         {events.map((e) => (
           <EventRow key={e.id} e={e} mounted={mounted} />
         ))}

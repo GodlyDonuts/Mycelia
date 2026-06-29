@@ -45,12 +45,44 @@ export async function getDashboard() {
 
   const active = nodeData.filter((n) => n.status !== "offline").length
   const events = await recentEvents(8)
+  const compute = await queryOne<{ gpu_hours: string; cpu_hours: string }>(
+    `SELECT
+       coalesce(sum(t.gpu_ms) FILTER (WHERE n.gpu_model <> '—'),0) / 3600000.0 AS gpu_hours,
+       coalesce(sum(t.gpu_ms) FILTER (WHERE n.gpu_model = '—'),0) / 3600000.0 AS cpu_hours
+     FROM tiles t LEFT JOIN nodes n ON n.id=t.assigned_node_id
+     WHERE t.status='verified' AND t.completed_at >= date_trunc('day',now())`,
+  )
+  const providerRank = await queryOne<{ rank: number; total: number }>(
+    `WITH providers AS (SELECT DISTINCT user_id FROM nodes WHERE user_id IS NOT NULL),
+     earnings AS (
+       SELECT p.user_id, coalesce((SELECT sum(l.amount_myc) FROM ledger_entries l
+         WHERE l.account_id=p.user_id AND l.entry_type='provider_earn'),0) AS earned
+       FROM providers p
+     ), ranked AS (
+       SELECT user_id, row_number() OVER (ORDER BY earned DESC)::int AS rank, count(*) OVER ()::int AS total
+       FROM earnings
+     ) SELECT rank,total FROM ranked WHERE user_id=$1`,
+    [DEMO_USER],
+  )
+  const history = await query<{ date: string; myc: string }>(
+    `SELECT to_char(date_trunc('day',created_at),'YYYY-MM-DD') AS date,
+            sum(amount_myc)::float8 AS myc
+     FROM ledger_entries
+     WHERE account_id=$1 AND entry_type='provider_earn' AND created_at >= now() - interval '90 days'
+     GROUP BY date_trunc('day',created_at) ORDER BY date_trunc('day',created_at)`,
+    [DEMO_USER],
+  )
 
   return {
     totalEarnings,
     totalEarningsUsd: Math.round(totalEarnings * 0.12),
     activeNodes: active,
     enrolledNodes: nodeData.length,
+    gpuHoursToday: Math.round(num(compute?.gpu_hours) * 100) / 100,
+    cpuHoursToday: Math.round(num(compute?.cpu_hours) * 100) / 100,
+    networkRank: providerRank?.rank ?? 0,
+    providerCount: providerRank?.total ?? 0,
+    earningsHistory: history.map((p) => ({ date: p.date, myc: Math.round(num(p.myc)) })),
     nodes: nodeData,
     events,
   }
@@ -177,9 +209,17 @@ export async function getMarketplace() {
     `SELECT id,name,type,req_gpu_model,params,reward_bid_myc,total_tiles,completed_tiles,status,replication_factor,requester_name,deadline_at
      FROM jobs ORDER BY created_at DESC LIMIT 24`,
   )
-  const market = await queryOne<{ supply_units: string; demand_units: string; clearing_price_myc: string }>(
-    `SELECT supply_units, demand_units, clearing_price_myc FROM market_snapshots ORDER BY captured_at DESC LIMIT 1`,
+  const market = await queryOne<{ supply_units: string; demand_units: string; utilization: string }>(
+    `SELECT
+       (SELECT count(*)::float8 FROM nodes WHERE status IN ('online','idle')) AS supply_units,
+       (SELECT coalesce(sum(greatest(total_tiles-completed_tiles,0)),0)::float8
+        FROM jobs WHERE status IN ('queued','running','verifying')) AS demand_units,
+       (SELECT coalesce(avg(t.gpu_pct),0)::float8 FROM node_telemetry_current t
+        JOIN nodes n ON n.id=t.node_id WHERE n.status='online') AS utilization`,
   )
+  const supply = Math.max(1, num(market?.supply_units))
+  const demand = num(market?.demand_units)
+  const pressure = Math.max(0.65, Math.min(2.5, demand / supply))
   const mapStatus = (s: string) =>
     s === "completed" ? "completed" : s === "queued" ? "queued" : s === "running" || s === "ready_to_settle" ? "running" : "open"
   return {
@@ -200,9 +240,10 @@ export async function getMarketplace() {
       tier: j.params?.tier ?? "standard",
     })),
     market: {
-      supply: Math.round(num(market?.supply_units)),
-      demand: Math.round(num(market?.demand_units)),
-      clearingPrice: num(market?.clearing_price_myc) || 0.12,
+      supply: Math.round(supply),
+      demand: Math.round(demand),
+      clearingPrice: Math.round(0.12 * pressure * 1000) / 1000,
+      utilization: Math.round(num(market?.utilization)),
     },
   }
 }

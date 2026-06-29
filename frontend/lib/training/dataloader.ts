@@ -33,7 +33,7 @@ export function shardSamples(
   }))
 }
 
-export function batchIterator(samples: Sample[], batchSize: number): Generator<Sample[]> {
+export function* batchIterator(samples: Sample[], batchSize: number): Generator<Sample[]> {
   for (let i = 0; i < samples.length; i += batchSize) {
     yield samples.slice(i, i + batchSize)
   }

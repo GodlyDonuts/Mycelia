@@ -1,4 +1,4 @@
-// Typed mock data + domain types for the live Network Telemetry view.
+// Shared domain types and deterministic layout helpers for Network Telemetry.
 //
 // Everything here is realistic placeholder data driven by client-side
 // intervals. In production every shape below is emitted by the scheduler's

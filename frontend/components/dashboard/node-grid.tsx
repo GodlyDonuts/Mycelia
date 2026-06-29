@@ -1,17 +1,15 @@
 "use client"
 
-import { NODES, type NodeData } from "@/lib/dashboard-data"
+import type { NodeData } from "@/lib/dashboard-data"
 import { usePoll } from "@/lib/api"
 import { NodeCard, NodeCardSkeleton, AddDeviceCard } from "./node-card"
 
 type DashboardPayload = { nodes: NodeData[] }
 
 export function NodeGrid() {
-  // Live node roster + gauges from the read API. While the first frame is
-  // loading (`data === null`), show skeletons; fall back to mock NODES on error.
   const { data, error } = usePoll<DashboardPayload>("/api/dashboard", 2000)
   const loading = data === null && error === null
-  const nodes = data?.nodes ?? NODES
+  const nodes = data?.nodes ?? []
 
   return (
     <section aria-label="Your devices">
@@ -27,6 +25,10 @@ export function NodeGrid() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {loading ? (
           Array.from({ length: 6 }).map((_, i) => <NodeCardSkeleton key={i} />)
+        ) : error ? (
+          <div className="col-span-full rounded-xl border border-destructive/25 bg-destructive/5 p-5 font-mono text-xs text-destructive">
+            Live node telemetry unavailable: {error}
+          </div>
         ) : (
           <>
             {nodes.map((node) => (

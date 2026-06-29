@@ -61,6 +61,11 @@ export async function seed(pg: SeedConn): Promise<void> {
      ON CONFLICT (account_id) DO NOTHING`,
     [DEMO_REQUESTER, DEMO_USER, PLATFORM_ACCOUNT],
   )
+  await pg.query(
+    `INSERT INTO provider_settings(user_id,contribution_cap_pct,only_when_idle)
+     VALUES ($1,80,true) ON CONFLICT (user_id) DO NOTHING`,
+    [DEMO_USER],
+  )
 
   // ---- visible "your" nodes ----
   const visibleIds: string[] = []
@@ -118,13 +123,14 @@ export async function seed(pg: SeedConn): Promise<void> {
 
   // ---- seeded historical earnings for "you" (so the dashboard total is real) ----
   let key = 0
-  const histTotal = 47000
-  for (let i = 0; i < visibleIds.length; i++) {
-    const amt = Math.round((histTotal / visibleIds.length) * (0.6 + rnd() * 0.8))
+  // Ninety days of ledger-backed history gives the chart a truthful series:
+  // every plotted point is an actual append-only ledger row, not client data.
+  for (let i = 89; i >= 0; i--) {
+    const amt = Math.round(360 + (89 - i) * 3.1 + Math.sin(i / 5) * 72 + rnd() * 90)
     await pg.query(
-      `INSERT INTO ledger_entries(account_id,amount_myc,entry_type,idempotency_key,memo)
-       VALUES ($1,$2,'provider_earn',$3,'historical earnings')`,
-      [DEMO_USER, amt, `seed-hist-${key++}`],
+      `INSERT INTO ledger_entries(account_id,amount_myc,entry_type,idempotency_key,memo,created_at)
+       VALUES ($1,$2,'provider_earn',$3,'historical earnings',now() - ($4 || ' days')::interval)`,
+      [DEMO_USER, amt, `seed-hist-${key++}`, String(i)],
     )
   }
 

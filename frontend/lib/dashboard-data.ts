@@ -1,7 +1,4 @@
-// Typed mock data + domain types for the Contributor ("Cultivator") dashboard.
-//
-// Everything here is realistic placeholder data. In production these shapes
-// are what the live telemetry layer will emit:
+// Shared dashboard domain types plus SSR presentation metadata.
 //   - StatCard values arrive from the scheduler's aggregate metrics feed.
 //   - NodeTelemetry (cpu/gpu/ram/job) streams over a per-node heartbeat
 //     (WebSocket / SSE) — see the comments in <NodeCard /> and useNodeTelemetry.
